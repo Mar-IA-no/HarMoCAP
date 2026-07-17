@@ -48,9 +48,9 @@ No hay ownership permanente por agente. La tarea o el usuario define el rol acti
 
 ## Flujo Git y espejos
 
-El repositorio principal es `Mar-IA-no/HarMoCAP`, remoto local `origin`. El espejo privado de la organizacion es `AlterMundi/HarMoCAP`, remoto local `altermundi`.
+El repositorio principal es `Mar-IA-no/HarMoCAP`, remoto local `origin`. El espejo publico de la organizacion es `AlterMundi/HarMoCAP`, remoto local `altermundi`.
 
-La configuracion canonica usa `origin` para fetch y push, con dos `pushurl`: primero el repositorio de `Mar-IA-no` y luego el espejo de `Altermundi`. Asi, el flujo normal `git push` publica ambos repositorios. Si un push falla en uno de los destinos, el estado de los dos remotos debe verificarse antes de continuar; no se considera sincronizacion confirmada hasta comprobar ambos commits.
+La configuracion canonica usa `origin` para fetch y push, con dos `pushurl`: primero el repositorio de `Mar-IA-no` y luego el espejo de `AlterMundi`. Asi, el flujo normal `git push` publica ambos repositorios publicos. Si un push falla en uno de los destinos, el estado de los dos remotos debe verificarse antes de continuar; no se considera sincronizacion confirmada hasta comprobar ambos commits.
 
 ## Fuentes conceptuales y tecnicas
 
