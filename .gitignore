@@ -39,9 +39,19 @@ credentials.json
 # Papers y artefactos pesados de investigacion
 Biblioteca/*/papers/
 
-# Datos y resultados locales: se habilitan por frente cuando corresponda
-# data/
-# outputs/
-# results/
-# checkpoints/
-# logs/
+# Datos y resultados locales (plan M0)
+data/
+runs/
+outputs/
+*.engine
+*.pt
+*.onnx
+.venv/
+
+# Grabaciones naturales: privacidad — solo se publican con consentimiento (addendum #4)
+outputs/sessions/
+*.session.jsonl
+
+# Excepciones: ejemplo SINTÉTICO del kit y fixtures deterministas (r2 #13, addendum #4)
+!examples/session_v1.jsonl
+!examples/fixtures/*.jsonl

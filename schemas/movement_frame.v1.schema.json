@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "harmocap/movement_frame.v1",
+  "title": "MovementFrame v1 — una linea del .jsonl de sesion HarMoCAP",
+  "type": "object",
+  "required": [
+    "schema_version", "feature_set_version", "producer_version", "contract_id",
+    "config_hash", "model_id", "stream_id", "captured_frame_id",
+    "captured_at_us", "processed_at_us", "frame_w", "frame_h", "fps",
+    "calibration_generation", "calibration_state", "n_persons",
+    "keypoint_order", "feature_order", "persons"
+  ],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "feature_set_version": {"type": "string"},
+    "producer_version": {"type": "string"},
+    "contract_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+    "config_hash": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+    "model_id": {"type": "string"},
+    "stream_id": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
+    "captured_frame_id": {"type": "integer", "minimum": 0},
+    "captured_at_us": {"type": "integer", "minimum": 0},
+    "processed_at_us": {"type": "integer", "minimum": 0},
+    "frame_w": {"type": "integer", "minimum": 1},
+    "frame_h": {"type": "integer", "minimum": 1},
+    "fps": {"type": "number", "minimum": 0},
+    "calibration_generation": {"type": "integer", "minimum": 0},
+    "calibration_state": {"enum": ["calibrating", "frozen"]},
+    "calibration_params": {
+      "type": "object",
+      "properties": {
+        "torso_height_norm": {"type": "number"},
+        "vmax_hand": {"type": "number"},
+        "vmax_center": {"type": "number"},
+        "jerk_ref": {"type": "number"},
+        "energy_ref": {"type": "number"},
+        "accel_ref": {"type": "number"}
+      },
+      "additionalProperties": false
+    },
+    "calibration_effective_from": {"type": "integer"},
+    "n_persons": {"type": "integer", "minimum": 0},
+    "keypoint_order": {"type": "array", "items": {"type": "string"}, "minItems": 17, "maxItems": 17},
+    "feature_order": {"type": "array", "items": {"type": "string"}, "minItems": 21, "maxItems": 21},
+    "persons": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["slot_id", "present"],
+        "properties": {
+          "slot_id": {"type": "integer", "minimum": 0},
+          "present": {"type": "boolean"},
+          "keypoints": {
+            "type": "array", "minItems": 17, "maxItems": 17,
+            "items": {"type": "array", "items": {"type": ["number", "null"]}, "minItems": 3, "maxItems": 3}
+          },
+          "kp_state": {
+            "type": "array", "minItems": 17, "maxItems": 17,
+            "items": {"type": "array", "items": {"type": "integer"}, "minItems": 3, "maxItems": 3}
+          },
+          "bbox_xywhn": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4},
+          "features": {"type": "array", "minItems": 21, "maxItems": 21, "items": {"type": ["number", "null"]}},
+          "feat_state": {"type": "array", "minItems": 21, "maxItems": 21, "items": {"type": "integer", "minimum": 0, "maximum": 2}},
+          "provisional": {"type": "boolean"}
+        },
+        "if": {"properties": {"present": {"const": true}}},
+        "then": {"required": ["keypoints", "kp_state", "bbox_xywhn", "features", "feat_state"]}
+      }
+    }
+  }
+}

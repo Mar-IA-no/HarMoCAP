@@ -1,0 +1,26 @@
+{
+  "checkpoint": "yolo26m-pose.pt",
+  "export_args": {
+    "format": "engine",
+    "half": true,
+    "device": 0,
+    "imgsz": 640
+  },
+  "claim": "engine construido con flag half=True (build log); sin auditor\u00eda de precisi\u00f3n por-capa",
+  "export_s": 211.6,
+  "engine_path": "yolo26m-pose.engine",
+  "engine_final": "/mnt/m2-1TB/HarMoCAP/outputs/yolo26m-pose.engine",
+  "engine_sha256": "2d48d04dc0955c56becfdfc2e32d364c37135fc15e099b3c6c8b2ed125de1aeb",
+  "engine_bytes": 47171916,
+  "inference_test": {
+    "ok": true,
+    "n_persons": 3,
+    "speed_ms": {
+      "preprocess": 2.4676956236362457,
+      "inference": 2.5344714522361755,
+      "postprocess": 0.6027482450008392
+    }
+  },
+  "inference_s": 0.1,
+  "commit": "e71e14a90ba6643055a4a82e4b3741333b2e59ad"
+}

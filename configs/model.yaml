@@ -1,0 +1,18 @@
+# Percepción — modelo y tracker (plan M2, r4 #12)
+# Backend/checkpoint EXPLÍCITO: la rama RTX 3090 carga el .engine TensorRT
+# exportado en M1 (no el .pt, que invalidaría el benchmark de latencia).
+
+model:
+  # Checkpoint canónico de tiempo real (AGENTS.md: YOLO26m-pose)
+  realtime_checkpoint: "outputs/yolo26m-pose.engine"   # exportado por scripts/export_model.py
+  fallback_checkpoint: "yolo26m-pose.pt"               # si no existe el engine (se registra cuál se cargó)
+  smoke_checkpoint: "yolo26n-pose.pt"                  # SOLO smoke-test del workflow (M0/M1)
+  imgsz: 640
+  device: "cuda:0"
+  conf: 0.25
+  max_det: 8            # acotado (finding #12); el slot principal filtra después
+
+tracker:
+  name: "bytetrack.yaml"   # el más barato (pack §C); OC-SORT si movimiento no-lineal
+  persist: true
+  stream_buffer: false     # descarta frames viejos (tiempo real)

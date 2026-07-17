@@ -1,0 +1,26 @@
+# Representación — features de movimiento (plan M3)
+# Todo causal, trailing, time-aware (ventanas en MILISEGUNDOS, no frames).
+# Fórmulas y decisiones de diseño: docs/FEATURES.md (fuente canónica).
+
+windows:
+  velocity_ms: 120        # ventana trailing para derivadas de 1er orden
+  accel_ms: 200
+  jerk_ms: 300
+  aggregate_ms: 1000      # ventana de agregados media/MAD/máx
+  qom_ms: 400
+
+derivatives:
+  method: "causal_finite_diff"   # diferencias causales con dt real de captured_at
+  savgol_one_sided: true         # SG one-sided evaluado en el extremo (nunca centrado)
+
+calibration:
+  # Perfil fijo por sesión, congelado tras el período inicial (r2 #6, r6 #1).
+  period_ms: 5000          # duración del período 'calibrating'
+  # Fallback FIJO durante calibrating (no se recalcula por frame):
+  fallback:
+    torso_height_norm: 0.28   # altura de torso típica en coords isotrópicas (persona a ~2-4 m)
+    vmax_hand: 3.0            # velocidad máx de mano (unidades torso/s) para clipping a [0,1]
+    vmax_center: 1.5
+    jerk_ref: 40.0
+    energy_ref: 4.0
+    accel_ref: 8.0

@@ -1,0 +1,39 @@
+{
+  "backend": {
+    "loaded_checkpoint": "/mnt/m2-1TB/HarMoCAP/outputs/yolo26m-pose.engine",
+    "is_engine": true,
+    "imgsz": 640,
+    "conf": 0.25,
+    "max_det": 8,
+    "tracker": "bytetrack.yaml"
+  },
+  "capture_profile": {
+    "source": "outputs/test_video.mp4",
+    "backend": "FFMPEG",
+    "width": 810,
+    "height": 1080,
+    "fps": 30.0,
+    "buffersize_req": 1,
+    "fourcc": 877677894
+  },
+  "capture_dropped": 10,
+  "recorder_dropped": 0,
+  "frames": 290,
+  "emitted": 290,
+  "lat_sw_ms": {
+    "p50": 6.655,
+    "p95": 7.439,
+    "p99": 9.874,
+    "mean": 6.773682464454977,
+    "n": 211
+  },
+  "jitter_ms": {
+    "p50": 0.198,
+    "p95": 0.975,
+    "p99": 5.437,
+    "mean": 0.3919763033175355,
+    "n": 211
+  },
+  "stream_id": "16cb3d8b3a03d01a",
+  "contract_id": "ce85a6deb275d9dce09259a8a975de20"
+}

@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "harmocap"
+version = "0.1.0"
+description = "HarMoCAP — pose estimation y tracking corporal en tiempo real (YOLO-pose) con interfaz OSC de variables de movimiento para Harmonic Beacon"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "HarMoCAP / AlterMundi" }]
+
+# Deps pineadas (plan: pin de version; lockfile completo en requirements.lock)
+dependencies = [
+    "ultralytics==8.4.99",
+    "numpy>=1.26",
+    "scipy>=1.12",
+    "python-osc==1.9.3",
+    "opencv-python>=4.9",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "jsonschema>=4.21",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

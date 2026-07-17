@@ -26,6 +26,26 @@ No es todavia un producto clinico, un sistema de interpretacion psicologica del 
 | `PENDIENTES.md` | Pendientes del usuario |
 | `NOTAS_<A>-<B>.md` | Canales escritos entre Claude y Codex |
 | `Biblioteca/` | Investigaciones y fuentes archivadas |
+| `src/harmocap/` | Pipeline: captura, percepcion (YOLO26-pose), identidad, suavizado, features, interfaz OSC |
+| `schemas/` | Contrato canonico: `osc_contract.v1.json` (manifiesto) + JSON Schema de grabaciones |
+| `harmocap-nico-kit/` | **Kit portable para Nico** (generado, no editar a mano): replay + receptor + spec, stdlib pura |
+| `docs/` | `INTERFACE_SPEC.md` (contrato explicado), `FEATURES.md` (formulas), `DATASET_ROADMAP.md` |
+| `scripts/` | validate_workflow, export_model, run_realtime, record_session, build_nico_kit |
+| `configs/` | model / smoothing / identity / features / osc (YAML) |
+| `examples/` | sesion sintetica de ejemplo + fixtures deterministas del contrato |
+| `reports/<run_id>/` | evidencia versionada por corrida (env, build del engine, metricas GO/NO-GO) |
+| `tests/` | 36 tests: suavizado, identidad, features, contrato OSC, aislamiento del kit |
+
+### Quickstart
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"   # GPU: torch cu126
+.venv/bin/python -m pytest tests/            # suite completa
+.venv/bin/python scripts/run_realtime.py --source 0          # camara en vivo → OSC
+.venv/bin/python scripts/build_nico_kit.py   # regenerar el kit para Nico
+```
+
+Para Nico: la carpeta `harmocap-nico-kit/` es autocontenida — ver su `README.md`.
 
 ## Repositorios remotos
 
@@ -47,7 +67,11 @@ Claude y Codex pueden implementar o auditar segun la asignacion casuistica del u
 
 ## Licencia
 
-TBD.
+MIT (ver `LICENSE`). El pipeline de percepcion depende de `ultralytics`
+(AGPL-3.0, no redistribuida): si el pipeline combinado se distribuye como
+producto rigen los terminos AGPL para la combinacion — decision de producto
+diferida y documentada. El kit `harmocap-nico-kit/` no depende de ultralytics
+y es MIT puro.
 
 ## Contacto
 

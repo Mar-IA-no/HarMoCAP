@@ -1,0 +1,11 @@
+# Slot principal — máquina de estados con histéresis (plan M2, r2 #9; autoauditoría #5)
+# El slot estable está separado del track_id efímero de ByteTrack.
+
+slot:
+  # El incumbente retiene el slot mientras su track sea válido; se libera SOLO tras timeout.
+  occlusion_grace_ms: 1500    # tolerancia de oclusión antes de considerar perdido al incumbente
+  release_timeout_ms: 3000    # tras esto el slot se libera y puede reacquirir
+  acquire_rule: "largest_bbox"  # desempate determinista al reacquirir: largest_bbox | most_central
+  # r8 #1 — lifecycle robusto a UDP
+  tombstone_repeat_frames: 15   # el present=0 se repite N frames
+  receiver_lease_ms: 2000       # lease recomendado al receptor (documentado en el contrato)

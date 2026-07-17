@@ -1,0 +1,13 @@
+# Suavizado causal + máquina de estados de keypoints (plan M2)
+# One-Euro por keypoint, time-aware (dt real por muestra).
+
+one_euro:
+  mincutoff: 1.0      # Hz — bajar = menos jitter a baja velocidad
+  beta: 0.15          # subir = menos lag a alta velocidad (lado responsivo: la modulación castiga el lag)
+  dcutoff: 1.0        # Hz — corte para la derivada
+
+keypoint_state:
+  conf_threshold: 0.35     # conf de YOLO por debajo → el keypoint deja de ser 'observed'
+  held_timeout_ms: 500     # tiempo máximo en 'held' (hold-last) antes de pasar a 'invalid'
+  conf_decay_per_s: 1.2    # decaimiento de la confiabilidad efectiva durante 'held' (por segundo)
+  reset_after_invalid: true  # al volver a 'observed' tras 'invalid', se reinicializa el filtro One-Euro

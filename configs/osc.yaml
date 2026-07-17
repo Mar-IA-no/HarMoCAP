@@ -1,0 +1,13 @@
+# Interfaz OSC hacia Nico (plan M4)
+osc:
+  # Destinos configurados (la respuesta a /hello/request va aquí, no al origen del datagrama)
+  destinations:
+    - host: "127.0.0.1"
+      port: 9000
+  rate_hz: 30                # tasa de emisión (≈ tasa de video); Nico interpola a tasa de audio
+  hello_rebroadcast_s: 1.0   # rebroadcast periódico de /hello + /calibration
+  control_port: 9001         # puerto de control del emisor para /hello/request (opcional)
+  max_datagram_bytes: 1200   # aserción ejecutable de tamaño (r8 #8)
+
+recorder:
+  out_dir: "outputs/sessions"   # grabaciones naturales: gitignored (privacidad; addendum #4)

@@ -1,0 +1,125 @@
+{
+  "name": "harmocap-osc-contract",
+  "contract_version": "1",
+  "layout_version": "1",
+  "schema_version": "1.0.0",
+  "feature_set_version": "1.0.0",
+  "namespace": "/harmocap/v1",
+  "transport": {
+    "protocol": "OSC 1.0 sobre UDP",
+    "bundle": "un bundle atomico por frame, timetag immediately",
+    "max_datagram_bytes": 1200,
+    "hello_rebroadcast_s": 1.0,
+    "rate_hz_nominal": 30,
+    "nota_consumidor": "los datos llegan a tasa de video (~30 Hz): interpolar/suavizar a tasa de audio en el receptor"
+  },
+  "coordinate_system": {
+    "descripcion": "isotropico: x_iso = x_px / frame_h ; y_iso = y_px / frame_h",
+    "origen": "arriba-izquierda",
+    "x": "hacia la derecha, rango [0, frame_w/frame_h]",
+    "y": "hacia abajo, rango [0, 1]",
+    "espejo": "sin espejo (la izquierda del sujeto aparece a la derecha de la imagen en camara frontal)",
+    "frame_dims": "frame_w y frame_h viajan en /hello"
+  },
+  "hashes": {
+    "algoritmo": "SHA-256 truncado a 128 bits, hex (32 chars)",
+    "contract_id": "sobre el JSON canonico de este manifiesto (claves ordenadas, sin espacios, sin NaN/Inf, UTF-8), EXCLUYENDO contract_id/golden_hash/expected_contract_id; valor esperado en fixture sidecar",
+    "config_hash": "sobre el JSON canonico de la configuracion del productor",
+    "calibration_hash": "sobre los bytes normativos del blob de /calibration precedidos del descriptor 'calibration:v1:>6f'"
+  },
+  "stream_identity": {
+    "stream_id": "hex aleatorio de 64 bits por arranque del proceso",
+    "regla": "seq/frame_id/leases/tombstones/generaciones tienen scope POR stream_id; si el receptor ve un stream_id nuevo debe resetear su estado y aceptar el stream nuevo; el descarte monotonico solo aplica dentro del mismo stream"
+  },
+  "counters": {
+    "captured_frame_id": "contador de captura, CON huecos por drops",
+    "bundle_seq": "contador de emisiones OSC, sin huecos del lado emisor: mide perdida UDP",
+    "n_persons": "slots emitidos con present=1 (no detecciones brutas)"
+  },
+  "receiver_rules": {
+    "gating": "no liberar frames hasta poseer la tupla (contract_id, calibration_generation, calibration_hash): requiere /hello Y /calibration coincidentes; si difieren entre si, rechazar la generacion completa y re-esperar ambos",
+    "descarte_monotonico": "descartar cualquier bundle con bundle_seq <= ultimo aplicado (mismo stream_id)",
+    "lease_ms": 2000,
+    "lease": "si no llegan datos de un slot por mas de lease_ms, tratarlo como ausente aunque no haya llegado tombstone",
+    "tombstone": "present=0 se repite ~15 frames; con present=0 el bundle NO trae keypoints/bbox/features",
+    "feature_invalid": "cuando feat_state[i]=2 (invalid) el valor de features[i] es un sentinel 0.0 y DEBE ignorarse",
+    "provisional": "mientras calibration_state=calibrating las features usan el perfil fallback y son provisionales"
+  },
+  "keypoint_order": [
+    "nose", "left_eye", "right_eye", "left_ear", "right_ear",
+    "left_shoulder", "right_shoulder", "left_elbow", "right_elbow",
+    "left_wrist", "right_wrist", "left_hip", "right_hip",
+    "left_knee", "right_knee", "left_ankle", "right_ankle"
+  ],
+  "states_enum": {
+    "0": "observed — coordenada de YOLO filtrada; conf = confianza del modelo",
+    "1": "held — hold-last: coordenada retenida, conf decae (confiabilidad efectiva causal)",
+    "2": "invalid — sin dato utilizable; ignorar el valor",
+    "3": "RESERVADO (imputed) — no se emite en v1"
+  },
+  "blobs": {
+    "endianness": "big-endian",
+    "keypoints": {"layout": "17 x struct('>fff') = (x_iso, y_iso, conf)", "bytes": 204},
+    "kp_state": {"layout": "17 x struct('>BIQ') = (estado u8, age_frames u32, age_us u64)", "bytes": 221},
+    "features": {"layout": "struct('>21f') en feature_order", "bytes": 84},
+    "feat_state": {"layout": "struct('>21B') en feature_order", "bytes": 21},
+    "calibration_params": {"layout": "struct('>6f') en calibration_param_order", "bytes": 24}
+  },
+  "feature_order": [
+    {"i": 0,  "name": "qom",                "range": [0, 1],  "polaridad": "1 = mucho movimiento global (proxy del QoM de Camurri por velocidad media de keypoints)"},
+    {"i": 1,  "name": "contraction",        "range": [0, 1],  "polaridad": "1 = cuerpo contraido (extremidades cerca del centro)"},
+    {"i": 2,  "name": "expansion",          "range": [0, 1],  "polaridad": "1 = cuerpo expandido (area de hull convexo / torso^2)"},
+    {"i": 3,  "name": "vel_hand_l",         "range": [0, 1],  "polaridad": "1 = mano izquierda a velocidad maxima calibrada (torsos/s)"},
+    {"i": 4,  "name": "vel_hand_r",         "range": [0, 1],  "polaridad": "idem mano derecha"},
+    {"i": 5,  "name": "vel_center",         "range": [0, 1],  "polaridad": "1 = centro del cuerpo a velocidad maxima calibrada"},
+    {"i": 6,  "name": "smoothness_l",       "range": [0, 1],  "polaridad": "1 = movimiento suave (jerk bajo), 0 = entrecortado"},
+    {"i": 7,  "name": "smoothness_r",       "range": [0, 1],  "polaridad": "idem derecha"},
+    {"i": 8,  "name": "symmetry",           "range": [0, 1],  "polaridad": "1 = postura simetrica respecto del eje corporal"},
+    {"i": 9,  "name": "verticality",        "range": [-1, 1], "polaridad": "1 = erguido, 0 = horizontal, -1 = invertido (coseno del eje torso vs vertical)"},
+    {"i": 10, "name": "angle_elbow_l",      "range": [0, 1],  "polaridad": "angulo/pi: 1 = brazo extendido, 0 = plegado"},
+    {"i": 11, "name": "angle_elbow_r",      "range": [0, 1],  "polaridad": "idem"},
+    {"i": 12, "name": "angle_knee_l",       "range": [0, 1],  "polaridad": "idem pierna"},
+    {"i": 13, "name": "angle_knee_r",       "range": [0, 1],  "polaridad": "idem"},
+    {"i": 14, "name": "angle_shoulder_l",   "range": [0, 1],  "polaridad": "angulo del brazo respecto del torso: 1 = brazo arriba/lejos"},
+    {"i": 15, "name": "angle_shoulder_r",   "range": [0, 1],  "polaridad": "idem"},
+    {"i": 16, "name": "angle_hip_l",        "range": [0, 1],  "polaridad": "angulo pierna-torso"},
+    {"i": 17, "name": "angle_hip_r",        "range": [0, 1],  "polaridad": "idem"},
+    {"i": 18, "name": "laban_weight_proxy", "range": [0, 1],  "polaridad": "1 = alta energia cinetica. PROXY cinematico, NO Laban canonico"},
+    {"i": 19, "name": "laban_time_proxy",   "range": [0, 1],  "polaridad": "1 = subito (aceleracion media alta). PROXY"},
+    {"i": 20, "name": "laban_space_proxy",  "range": [0, 1],  "polaridad": "1 = trayectoria directa de manos (desplazamiento/camino). PROXY"}
+  ],
+  "calibration_param_order": [
+    "torso_height_norm", "vmax_hand", "vmax_center", "jerk_ref", "energy_ref", "accel_ref"
+  ],
+  "addresses": {
+    "/harmocap/v1/hello": {
+      "typetags": "ssssssssisshii",
+      "args": ["stream_id", "schema_version", "feature_set_version", "producer_version", "model_id", "config_hash", "contract_id", "layout_version", "calibration_generation", "calibration_state", "calibration_hash", "effective_from_frame_id(h)", "frame_w", "frame_h"],
+      "frecuencia": "rebroadcast ~1 Hz + on-change"
+    },
+    "/harmocap/v1/hello/request": {
+      "typetags": "si",
+      "args": ["contract_id ('' = vigente)", "calibration_generation (-1 = todas)"],
+      "nota": "opcional; al puerto de control del emisor; la respuesta va a los destinos configurados"
+    },
+    "/harmocap/v1/calibration": {
+      "typetags": "sishb",
+      "args": ["stream_id", "generation", "calibration_hash", "effective_from_frame_id(h)", "params_blob"],
+      "nota": "los PARAMETROS de calibracion viven exclusivamente aqui"
+    },
+    "/harmocap/v1/meta": {
+      "typetags": "shhifsish hh h",
+      "args": ["stream_id", "captured_frame_id(h)", "bundle_seq(h)", "n_persons", "fps", "contract_id", "calibration_generation", "calibration_state", "captured_at_us(h)", "processed_at_us(h)", "queued_for_send_at_us(h)"]
+    },
+    "/harmocap/v1/person/{slot}/present": {"typetags": "i", "args": ["1|0"]},
+    "/harmocap/v1/person/{slot}/keypoints": {"typetags": "b", "args": ["blob keypoints"], "solo_si": "present=1"},
+    "/harmocap/v1/person/{slot}/kp_state": {"typetags": "b", "args": ["blob kp_state"], "solo_si": "present=1"},
+    "/harmocap/v1/person/{slot}/bbox": {"typetags": "ffff", "args": ["xc", "yc", "w", "h (normalizados xywhn)"], "solo_si": "present=1"},
+    "/harmocap/v1/person/{slot}/features": {"typetags": "b", "args": ["blob features"], "solo_si": "present=1"},
+    "/harmocap/v1/person/{slot}/feat_state": {"typetags": "b", "args": ["blob feat_state"], "solo_si": "present=1"}
+  },
+  "dominio_operativo": {
+    "requisitos": "camara fija, aproximadamente frontal, cuerpo suficientemente visible (torso >= ~15% de la altura del frame)",
+    "advertencia": "fuera de este dominio (vista lateral, perspectiva extrema) las features 2D degradan SIN aviso del modelo"
+  }
+}

@@ -1,0 +1,9 @@
+THIRD PARTY NOTICES — harmocap-nico-kit
+
+El kit corre con la biblioteca estándar de Python. Dependencia opcional:
+
+- python-osc 1.9.3 — Unlicense (dominio público) — https://github.com/attwad/python-osc
+  Se instala vía requirements.txt solo si querés usarla en tu propio receptor.
+
+El kit NO incluye ni depende de ultralytics (AGPL-3.0) ni de ningún otro
+componente del pipeline de percepción.
