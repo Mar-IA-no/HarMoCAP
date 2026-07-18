@@ -1,0 +1,27 @@
+{
+  "tag": "ft2",
+  "checkpoint": "/mnt/m2-1TB/HarMoCAP/runs/20260718_0832_ft2_crowdpose_mixed30/weights/best.pt",
+  "checkpoint_sha256": "80eae9b99ab5710ec6c0bd366acefa0e116482e98c9bba3803b62bf984fc0bcc",
+  "protocol": {
+    "imgsz": 640,
+    "batch": 16,
+    "device": "cuda:0",
+    "verbose": false,
+    "plots": false,
+    "conf_iou_nms": "defaults de model.val()"
+  },
+  "benchmarks": {
+    "crowdpose_val_coco17": {
+      "pose_map50_95": 0.6256,
+      "pose_map50": 0.7818,
+      "box_map50_95": 0.6892,
+      "eval_s": 12.5
+    },
+    "coco_pose_val2017": {
+      "pose_map50_95": 0.6752,
+      "pose_map50": 0.8797,
+      "box_map50_95": 0.7431,
+      "eval_s": 19.0
+    }
+  }
+}
