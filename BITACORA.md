@@ -118,3 +118,11 @@ T1.1 (ruta critica, codex Sol): plantillas de contratos AMBOS planos en harmonic
 Wave 3 en curso: T1.2 (codex Sol: manifiesto beacon-spatial + /beacon/state dump + host/puerto configurables), T4.1 (codex Sol: CORE_DESIGN + stage contract draft), T1.3 cerrada (grok): shaper.contract.json formalizando la superficie EXISTENTE (/digital/* + broadcast /beacon/*), con discrepancias reporte-vs-codigo documentadas (el codigo gana), codec byte-identico, 7/7 tests (a1218f8). digital-beacon con .grokignore (fa6dca7).
 
 Nota de proceso: codex Sol corre builds en paralelo en repos distintos sin conflicto; si aparece rate-limit, el fallback es re-dispatch secuencial.
+
+## 2026-07-18 - S8 - T1.2: beacon-spatial ya es instrumento formal (F1 completa para MVP)
+
+T1.2 (codex Sol) cerrada y verificada E2E EN VIVO por CompAII (el sandbox de codex no podia abrir UDP; la verificacion real se hizo desde el orquestador): scsynth + sclang boot reales, `OSCdefs registered: 71`, request `/beacon/state` con contract_id correcto -> dump atomico de 73 mensajes (begin + 66 valores + end), con `/beacon/master`=1.5 y `/beacon/gain/3`=2.2 reflejados. Commit `2a9d314`.
+
+Entregado: `beacon_spatial.contract.json` + golden (69 OSCdefs formalizados, sin voice_model_alias — el contraejemplo canonico del hibrido D1), dump de estado bidireccional gateado por contract_id con cola por requester, `/hello` con rebroadcast 1 Hz, listen configurable via BEACON_OSC_HOST/PORT (loopback por default, 0.0.0.0 abre remoto), tests 6/6, conftest.py para pytest sin hacks.
+
+F1 (contratos) queda completa para el MVP: beacon-spatial + shaper tienen manifiesto formal; harmonic-weaver define las plantillas. F2 (extraccion del shaper) es la proxima fase grande.
