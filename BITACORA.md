@@ -136,3 +136,15 @@ T3.1 closed: `nature/` was migrated into beacon-spatial (`4532fa9`): ResonantFil
 T4.3a and T4.3c closed in harmonic-weaver (`5616a2f`): HarMoCAP and ECG source drivers, including focus/state propagation, stream gating, lease behavior, ECG edge-trigger semantics, and 30 passing combined tests at integration.
 
 T4.3b was not closed: Kimi returned an explicit quota 403 after creating an untested partial MIDI driver. The partial work is being recovered through the active Codex GPT lane; it is not committed or accepted.
+
+## 2026-07-18 - S10 - Wave 5 en curso: T2.3, T2.4, T3.2 cerradas
+
+T4.3b recovered and closed: Codex rebuilt the partial MIDI driver (untracked file from the exhausted Kimi run was input, not trusted output). `harmonic-weaver` `d0d38f9`: hot-plug tolerant driver, lazy mido import, 10 focused tests, 40-test suite, real no-hardware probe emitting complete invalid Source Frame channels.
+
+T2.3 closed: native MIDI-note harmonic source in harmonic-shaper (`fefe142`). Dependency-free mapping ported from NaturalHarmony (`harmonics.py`/`key_mapper.py`); `--slave` remains optional; `/digital/*` unchanged. Audit evidence: 43 focused tests, 57-test suite, headless VoiceParameterStore probes, and an explicit same-band collision regression (notes 0 and 12 share band 1; superseded note-off must not silence the current owner).
+
+T3.2 closed: nature sample player in beacon-spatial (`39831c8`). `\sample_player` SynthDef mixed into the 13-band path; `/beacon/nature/load|gain|stop` with strict path validation; manifest extended to 74 OSCdefs with atomic state dump carrying nature fields. Audit evidence: 17 tests including a real UDP OSC-string type probe (sclang decodes OSC `s` as Symbol — the original handler's String-only guard rejected valid packets; now both textual types accepted, numerics/blobs still rejected) and a full orchestrator E2E: real scsynth+sclang, generated WAV load → gain 0.35 → state dump with active path → stop → empty path. Audible listening explicitly unconfirmed.
+
+T2.4 closed: clipping characterized, not hidden (`7f1dfc2`). Headless smoke suite with measured peak/RMS/full-scale counts for one-voice, 32-voice, and rapid-transition scenarios; live callback vs pure reference equivalence proven sample-exact in steady sections. Real fix: `synth_pure` erased release-tail gains (read -120 dB from inactive frames); now holds last active gain until envelope ends. Shared `soft_limit` (tanh*1.05*0.95) used by both renderers. Decision documented in `docs/CLIPPING_DIAGNOSIS.md`: keep 1/sqrt(N) + bounded limiter, no arbitrary normalization. 63 tests + 1 skip.
+
+Wave 5 remaining in flight: T4.2 (weaver engine, critical path, Codex Sol), T3.3 (beacon-only modulation split, Grok). Process note: this session ran gpt-5.6-terra then k3; both repairs (T3.2 string-type, T2.3 collision test) were dispatched as focused follow-up builds rather than accepting partially verified work.
