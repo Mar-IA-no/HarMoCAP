@@ -148,3 +148,16 @@ T3.2 closed: nature sample player in beacon-spatial (`39831c8`). `\sample_player
 T2.4 closed: clipping characterized, not hidden (`7f1dfc2`). Headless smoke suite with measured peak/RMS/full-scale counts for one-voice, 32-voice, and rapid-transition scenarios; live callback vs pure reference equivalence proven sample-exact in steady sections. Real fix: `synth_pure` erased release-tail gains (read -120 dB from inactive frames); now holds last active gain until envelope ends. Shared `soft_limit` (tanh*1.05*0.95) used by both renderers. Decision documented in `docs/CLIPPING_DIAGNOSIS.md`: keep 1/sqrt(N) + bounded limiter, no arbitrary normalization. 63 tests + 1 skip.
 
 Wave 5 remaining in flight: T4.2 (weaver engine, critical path, Codex Sol), T3.3 (beacon-only modulation split, Grok). Process note: this session ran gpt-5.6-terra then k3; both repairs (T3.2 string-type, T2.3 collision test) were dispatched as focused follow-up builds rather than accepting partially verified work.
+
+
+## 2026-07-18 - S11 - Wave 5 closed + archives complete (F6 done)
+
+T3.3 closed: beacon-only modulation split in beacon-spatial (`0a40191`). Four presets (spectrum-projection, harmonic-projection, consonance-gate, timbre-filter) validated against the formal 13-band manifest; band 0/14..32/q-on-13 rejected at validate time. Behavioral audit: all preset emissions in-contract, EWMA direction, runtime no-shaper-import check. Shaper-half explicitly deferred to F5.
+
+T4.2 closed — the critical path engine (`4b625b9`). Audit found the WS test silently skipped (fastapi undeclared in system python); isolated venv with declared deps gave 52 tests + 4 subtests with the WS round trip actually running. Live verification: uvicorn boot, real TCP WS handshake/gate/snapshot, route emit to native capability, panic latch gating routes, panic_reset safety dispatch to 5 voices, clear/recover. Evidence reports written by the engine itself.
+
+T3.4 closed (`de2768c`): both nature WAVs moved to beacon-spatial assets (gitignored, SHA-256 MANIFEST tracked); hashes verified.
+
+T6.2 closed by CompAII: §6 migration map fully verified on disk. T6.3 closed: ARCHIVE.md committed and pushed in digital-beacon (`ccce16c`, incl. final-state legacy gain fix a71a832) and NaturalHarmony (`22bd2ee`). F6 complete: tines + digital-beacon + NaturalHarmony all archived with destination maps.
+
+Remaining: T4.4 (patchbay, Codex in flight) → T4.5 (e2e rehearsal, never descoped; brief written with pre-verified inventory: 659 MB file-mode WAV present, two_persons fixture, ECG simulator, frogs sample in assets).
