@@ -18,9 +18,14 @@ hyperparameters:
                        # PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True.
   seed: 0
   deterministic: true
-  optimizer: auto      # default documentado de Ultralytics
+  optimizer: SGD       # EXPLÍCITO (cambio documentado 2026-07-18: 'auto' resolvió
+                       # SGD lr0=0.01 —régimen from-scratch— y degradó las métricas
+                       # época a época (0.627→0.559→0.488 mAP50-95(B), run 0232,
+                       # detectado por Mariano mirando el tmux). En modo auto
+                       # Ultralytics además IGNORA el lr0 del usuario.
   save_period: 1       # directiva 2026-07-18: checkpoint de CADA época (~50 MB × 40 = ~2 GB)
-  lr0: null            # null = default del optimizador auto
+  lr0: 0.001           # régimen de FINE-TUNING (10× menor que from-scratch)
+  lrf: 0.01            # LR final = lr0 × lrf = 1e-5 (cosine decay)
   patience: 15         # early-stopping conservador
   # augmentations: defaults de pose de Ultralytics; fliplr=0.5 con flip_idx
   # auditado en configs/dataset_mixed_ft1.yaml (scripts/convert_crowdpose.py)
