@@ -1,0 +1,11 @@
+# Dataset mixto ft2: CrowdPose(10k) + 30k COCO (seed 0) — iteración pre-autorizada
+# por el plan H3 ("subir la fracción COCO y reentrenar") tras regresión -1.08 en ft1.
+path: /mnt/m2-1TB/HarMoCAP/data
+train:
+  - crowdpose_yolo/images/train
+  - coco_subset30_train.txt
+val: crowdpose_yolo/images/val
+kpt_shape: [17, 3]
+flip_idx: [0, 2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 12, 11, 14, 13, 16, 15]
+names:
+  0: person

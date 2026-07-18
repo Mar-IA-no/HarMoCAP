@@ -1,0 +1,27 @@
+{
+  "tag": "baseline",
+  "checkpoint": "yolo26m-pose.pt",
+  "checkpoint_sha256": "2fbf16367022256a226035695c5c389384c6706e8bb8ab8fcd0e7976f05443c4",
+  "protocol": {
+    "imgsz": 640,
+    "batch": 16,
+    "device": "cuda:0",
+    "verbose": false,
+    "plots": false,
+    "conf_iou_nms": "defaults de model.val()"
+  },
+  "benchmarks": {
+    "crowdpose_val_coco17": {
+      "pose_map50_95": 0.596,
+      "pose_map50": 0.7628,
+      "box_map50_95": 0.6124,
+      "eval_s": 14.8
+    },
+    "coco_pose_val2017": {
+      "pose_map50_95": 0.6822,
+      "pose_map50": 0.886,
+      "box_map50_95": 0.7454,
+      "eval_s": 20.1
+    }
+  }
+}

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""T3 — Fine-tuning ft1 con la configuración pineada de configs/train_ft1.yaml.
+"""T3 — Fine-tuning ft1 con la configuración pineada de configs/train_ft2.yaml.
 
 Registra ANTES de entrenar el manifest del run (config completa + manifest del
 dataset + SHA-256 de las fuentes) y al terminar copia los artefactos livianos
@@ -19,7 +19,7 @@ import yaml
 from ultralytics import YOLO
 
 REPO = Path(__file__).resolve().parent.parent
-CFG = yaml.safe_load((REPO / "configs" / "train_ft1.yaml").read_text())
+CFG = yaml.safe_load((REPO / "configs" / "train_ft2.yaml").read_text())
 
 
 def main() -> int:
@@ -51,9 +51,17 @@ def main() -> int:
         data=str(REPO / CFG["data"]), epochs=hp["epochs"], imgsz=hp["imgsz"],
         batch=hp["batch"], seed=hp["seed"], deterministic=hp["deterministic"],
         patience=hp["patience"], device="cuda:0",
+        save_period=1,      # directiva: guardar TODAS las épocas
+        verbose=True,       # directiva: métricas completas visibles en tmux
         project=str(REPO / "runs"), name=run_id, exist_ok=True)
+    if hp.get("optimizer") and hp["optimizer"] != "auto":
+        kwargs["optimizer"] = hp["optimizer"]   # explícito: auto ignoraría lr0
     if hp.get("lr0"):
         kwargs["lr0"] = hp["lr0"]
+    if hp.get("lrf"):
+        kwargs["lrf"] = hp["lrf"]
+    if hp.get("save_period"):
+        kwargs["save_period"] = hp["save_period"]
     t0 = time.time()
     results = model.train(**kwargs)
     elapsed_h = (time.time() - t0) / 3600

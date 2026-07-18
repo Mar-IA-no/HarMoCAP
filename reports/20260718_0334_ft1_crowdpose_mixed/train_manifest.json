@@ -1,0 +1,88 @@
+{
+  "run_id": "20260718_0334_ft1_crowdpose_mixed",
+  "commit": "06c0c417a6bb7b4ab93b669b70cb1e19e510d420",
+  "config": {
+    "run_name": "ft1_crowdpose_mixed",
+    "base_checkpoint": "yolo26m-pose.pt",
+    "data": "configs/dataset_mixed_ft1.yaml",
+    "hyperparameters": {
+      "epochs": 40,
+      "imgsz": 640,
+      "batch": 16,
+      "seed": 0,
+      "deterministic": true,
+      "optimizer": "SGD",
+      "save_period": 1,
+      "lr0": 0.0005,
+      "lrf": 0.01,
+      "patience": 15
+    },
+    "eval_protocol": {
+      "script": "scripts/eval_pose.py",
+      "imgsz": 640,
+      "batch": 16,
+      "conf_iou_nms": "defaults de model.val()",
+      "benchmarks": [
+        "crowdpose_val_coco17",
+        "coco_pose_val2017"
+      ]
+    },
+    "go_no_go": {
+      "gain_crowdpose_ap_min": 1.5,
+      "regression_coco_ap_max": 1.0,
+      "decision": "usuario (con la tabla comparativa a la vista)"
+    }
+  },
+  "dataset_manifest": {
+    "train": {
+      "images": 10000,
+      "persons": 42416,
+      "source_json": "crowdpose_train.json",
+      "source_sha256": "10710e1a76b308ae",
+      "keypoint_order_source": [
+        "left_shoulder",
+        "right_shoulder",
+        "left_elbow",
+        "right_elbow",
+        "left_wrist",
+        "right_wrist",
+        "left_hip",
+        "right_hip",
+        "left_knee",
+        "right_knee",
+        "left_ankle",
+        "right_ankle",
+        "head",
+        "neck"
+      ]
+    },
+    "val": {
+      "images": 2000,
+      "persons": 8421,
+      "source_json": "crowdpose_val.json",
+      "source_sha256": "54b152f0255f128e",
+      "keypoint_order_source": [
+        "left_shoulder",
+        "right_shoulder",
+        "left_elbow",
+        "right_elbow",
+        "left_wrist",
+        "right_wrist",
+        "left_hip",
+        "right_hip",
+        "left_knee",
+        "right_knee",
+        "left_ankle",
+        "right_ankle",
+        "head",
+        "neck"
+      ]
+    },
+    "coco_subset": {
+      "n": 20000,
+      "seed": 0,
+      "from_total": 56599
+    }
+  },
+  "started_at": "2026-07-18T03:34:19-0300"
+}

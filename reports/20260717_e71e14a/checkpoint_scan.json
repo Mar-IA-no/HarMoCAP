@@ -1,0 +1,22 @@
+{
+  "12": {
+    "crowdpose": 0.6166,
+    "coco": 0.6686,
+    "cumple_ambos": false
+  },
+  "16": {
+    "crowdpose": 0.6185,
+    "coco": 0.6687,
+    "cumple_ambos": false
+  },
+  "20": {
+    "crowdpose": 0.6225,
+    "coco": 0.6705,
+    "cumple_ambos": false
+  },
+  "24": {
+    "crowdpose": 0.6244,
+    "coco": 0.6704,
+    "cumple_ambos": false
+  }
+}

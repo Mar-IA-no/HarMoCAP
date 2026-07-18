@@ -55,3 +55,11 @@ outputs/sessions/
 # Excepciones: ejemplo SINTÉTICO del kit y fixtures deterministas (r2 #13, addendum #4)
 !examples/session_v1.jsonl
 !examples/fixtures/*.jsonl
+
+# Media local: videos fuente y renders de inferencia (regenerables con scripts/render_videos.py;
+# exceden el límite de 100 MB de GitHub)
+Biblioteca/videos_people_dancing/
+Biblioteca/videos_people_dancing_inferido/
+
+# Barridos y tests locales de inferencia (videos regenerables)
+Biblioteca/test/

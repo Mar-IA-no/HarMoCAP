@@ -9,8 +9,14 @@ model:
   smoke_checkpoint: "yolo26n-pose.pt"                  # SOLO smoke-test del workflow (M0/M1)
   imgsz: 640
   device: "auto"        # cuda:0 (NVIDIA) / mps (Apple Silicon) / cpu — autodetecta
-  conf: 0.25
-  max_det: 8            # acotado (finding #12); el slot principal filtra después
+  conf: 0.05            # decisión usuario 2026-07-18 tras barrido: sin fantasmas visibles,
+                        # recall > precision para nuestro caso; además alimenta la 2da
+                        # asociación de ByteTrack (−16% churn de IDs medido). Piso efectivo
+                        # del tracker: track_low_thresh=0.1.
+  max_det: 300          # decisión usuario: "al máximo siempre" — el tope de detección no
+                        # limita los slots (el SlotManager elige a quién dar los 8);
+                        # barrido midió que maxdet=8 recortaba −20% de personas en multitud
+  # nota barrido 2026-07-18: `iou` es perilla MUERTA en YOLO26 (NMS-free) — no tunear
 
 tracker:
   name: "bytetrack.yaml"   # el más barato (pack §C); OC-SORT si movimiento no-lineal

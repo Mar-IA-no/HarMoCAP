@@ -3,9 +3,9 @@
 # como nueva entrada en el manifest del run. Comparabilidad: el eval usa
 # scripts/eval_pose.py con protocolo fijo, idéntico para baseline y candidato.
 
-run_name: ft1_crowdpose_mixed
+run_name: ft2_crowdpose_mixed30
 base_checkpoint: yolo26m-pose.pt        # preentrenado COCO (transfer, roadmap)
-data: configs/dataset_mixed_ft1.yaml    # CrowdPose-train COCO-17 + 20k COCO seed=0
+data: configs/dataset_mixed_ft2.yaml    # CrowdPose-train COCO-17 + 20k COCO seed=0
 
 hyperparameters:
   epochs: 40
@@ -32,7 +32,7 @@ hyperparameters:
   lrf: 0.01            # LR final = lr0 × lrf = 1e-5 (cosine decay)
   patience: 15         # early-stopping conservador
   # augmentations: defaults de pose de Ultralytics; fliplr=0.5 con flip_idx
-  # auditado en configs/dataset_mixed_ft1.yaml (scripts/convert_crowdpose.py)
+  # auditado en configs/dataset_mixed_ft2.yaml (scripts/convert_crowdpose.py)
 
 eval_protocol:
   script: scripts/eval_pose.py
