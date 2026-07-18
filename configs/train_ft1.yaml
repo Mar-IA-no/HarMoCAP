@@ -10,7 +10,12 @@ data: configs/dataset_mixed_ft1.yaml    # CrowdPose-train COCO-17 + 20k COCO see
 hyperparameters:
   epochs: 40
   imgsz: 640
-  batch: -1            # auto-batch en la 3090 (24 GB)
+  batch: 16            # EXPLÍCITO (cambio documentado 2026-07-17: el auto-batch
+                       # sondeó con la GPU fragmentada + servicio sai-inference
+                       # residente (346 MB) y eligió 8, duplicando el wall-clock.
+                       # 16 fijo = ~10.3 GB, margen amplio, y resuelve el caveat
+                       # de comparabilidad del validate-hyperparams. Se corre con
+                       # PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True.
   seed: 0
   deterministic: true
   optimizer: auto      # default documentado de Ultralytics
