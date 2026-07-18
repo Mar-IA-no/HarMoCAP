@@ -91,3 +91,18 @@ Implementacion: `SlotManager` (generaliza el slot principal: asignacion lowest-f
 Verificacion: 43/43 tests (SlotManager: asignacion/histeresis/tombstones/foco/compat max_slots=1; wire: bundle por persona <=1200 B peor caso, focused, control/select, golden nuevo; kit: aislamiento con Python del sistema). E2E real: video de 30 s con ~4-7 personas -> engine TensorRT -> 2879 bundles multi-persona; foco automatico en slot 0, `/control/select 2` enviado por UDP en vivo -> foco migro al slot 2 (modo manual) verificado en el wire y en el reporte del pipeline. Latencia software con multi-persona: p50 6.9 ms (sin degradacion vs una persona).
 
 Nota operativa: si el kit 1.0 ya fue entregado a Nico, debe reemplazarse por el regenerado (el cambio de contract_id es deliberado).
+
+## 2026-07-18 - S6 - Re-arquitectura del ecosistema Beacon: arranca la orquestacion (Wave 1 completa)
+
+El usuario aprobo ejecutar el plan de `Biblioteca/rearquitectura-ecosistema-beacon/` (Fable) en modo orquestado: CompAII (Hermes/kimi-k3) despacha builds por ia-bridge y audita cada resultado; Codex Sol (gpt-5.6-sol xhigh) toma la ruta critica que el plan original asignaba a Claude (sin tokens). Documentos del modo en `Biblioteca/beacon-ecosystem-orchestration/` (README, ORCHESTRATION, GOALS, briefs/). Ledger: board Kanban `beacon-ecosystem-orch`.
+
+Infra previa (plano 2, ya en `feat/hermes-support` de ia-bridge-mcp, pusheado): `--effort`/`--max-turns` ahora llegan de verdad al agente (eran no-ops); codex con `-s workspace-write` (antes sandbox read-only: builds "exitosos" que no escribian); grok effort `high` (el CLI no acepta `max`); timeout default 3600 desde config; CLIs symlinkados en `~/.local/bin` (los shells no interactivos no veian `~/.npm-global/bin` — causa probable de fallos historicos de Robin).
+
+Wave 1 (5/5 cards done, todo auditado antes de commit):
+- T0.1 (codex Sol): `webui.py` de beacon-spatial vuelve a parsear; conflictos de merge resueltos conservando sensores + fix de ruta de grabacion. Verificado en vivo: Flask bootea, GET / y POST /control responden 200. Commit `ea8202f`.
+- T0.2 (kimi): digital-beacon saneado — dir `: RTK && ` (0 archivos), 37 symlinks rotos + `normalized_analysis/`, `.venv` duplicado (843 MB). `data/uploads/` y `sample_manager.py` intactos.
+- T0.3 (grok): README de beacon-spatial alineado al motor real (13 bandas SC, puerto 57120), tabla OSC de MEMORY.md corregida al esquema `/beacon/*/N`, `beacon-osc.ANNOTATIONS.md` para direcciones sin destino. Commit `aa90637` (+ `.grokignore`).
+- T2.1 (kimi): `harmonic-shaper` scaffolded y publicado — `nicoechaniz/harmonic-shaper` + `AlterMundi/harmonic-shaper`, `origin` con doble pushurl (esquema espejo, usuario decidio cuentas propias en vez de Mar-IA-no). Commit `f6b01ab`.
+- T6.1 (kimi): `ARCHIVE.md` en harmonic-beacon-tines, commiteado `bdb1984` y pusheado.
+
+Nota de proceso: el board se opera manual (dispatcher off); las transiciones las hace CompAII al despachar/auditar (single-writer). Status validos de este Kanban: no usar `in_progress` (termino Lattice) — usar `running`.
