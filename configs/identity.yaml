@@ -11,3 +11,20 @@ slot:
   # r8 #1 — lifecycle robusto a UDP
   tombstone_repeat_frames: 15   # el present=0 se repite N frames
   receiver_lease_ms: 2000       # lease recomendado al receptor (documentado en el contrato)
+
+# H4a capa 3 — matcher de reasociación de slots (capa auditable propia).
+# Cuando aparece un track NUEVO y hay slots ocluidos/perdiéndose, se intenta
+# re-bindear el track al slot ausente por posición predicha + tamaño + borde.
+reacquisition:
+  enabled: true                 # (los modos lo sobreescriben)
+  max_pred_dist: 0.35           # distancia máx (fracción del alto) a la posición
+                                # predicha (pos + vel×Δt); crece con la incertidumbre:
+  pred_dist_growth_per_s: 0.15  # ensanche del gate por segundo de ausencia
+  size_ratio_max: 1.8           # ratio máx entre áreas de bbox (viejo vs nuevo)
+  edge_margin: 0.06             # bbox tocando borde a menos de esto = "salió por borde"
+  edge_gate_dist: 0.30          # si salió por un borde, la reaparición debe estar
+                                # a menos de esto del MISMO borde
+  teleport_reset_dist: 0.25     # salto > esto (fracción del alto) al re-bindear →
+                                # reset de One-Euro + buffers de features (derivadas
+                                # espurias si no)
+

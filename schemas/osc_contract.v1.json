@@ -1,8 +1,8 @@
 {
   "name": "harmocap-osc-contract",
-  "contract_version": "1.1",
+  "contract_version": "1.2",
   "layout_version": "1",
-  "schema_version": "1.1.0",
+  "schema_version": "1.2.0",
   "feature_set_version": "1.0.0",
   "namespace": "/harmocap/v1",
   "transport": {
@@ -14,6 +14,20 @@
     "rate_hz_nominal": 30,
     "max_slots": 8,
     "nota_consumidor": "los datos llegan a tasa de video (~30 Hz): interpolar/suavizar a tasa de audio en el receptor"
+  },
+  "crowd": {
+    "descripcion": "1.2: agregados de MULTITUD sobre TODAS las detecciones crudas (con y sin track), en su propio bundle por frame. En masa importa el recall, no la identidad. Emitido en ambos modos (group y crowd).",
+    "campos_orden": ["crowd_count", "crowd_qom", "density", "centroid_x", "centroid_y", "flow_x", "flow_y", "dispersion"],
+    "semantica": {
+      "crowd_count": "int — personas detectadas CRUDAS. NO confundir con n_persons de /meta (= slots emitidos, max 8)",
+      "crowd_qom": "0..1 — velocidad media de centros de bbox (norm/s ÷ 1.5, clip)",
+      "density": "0..1 — suma de áreas de bbox / área del frame",
+      "centroid_x": "0..aspect — centro de masa del grupo (coords isotrópicas)",
+      "centroid_y": "0..1",
+      "flow_x": "-1..1 — velocidad del centroide (norm/s ÷ 0.8, clip)",
+      "flow_y": "-1..1",
+      "dispersion": "0..1 — desvío medio de centros al centroide / semidiagonal"
+    }
   },
   "focus": {
     "descripcion": "cada bundle de persona presente lleva /person/{slot}/focused (1|0): exactamente un slot esta focal; Nico decide si mapea solo la focal o mezcla el grupo",
@@ -112,6 +126,11 @@
       "typetags": "sishb",
       "args": ["stream_id", "generation", "calibration_hash", "effective_from_frame_id(h)", "params_blob"],
       "nota": "los PARAMETROS de calibracion viven exclusivamente aqui"
+    },
+    "/harmocap/v1/crowd": {
+      "typetags": "shhifffffff",
+      "args": ["stream_id", "captured_frame_id(h)", "bundle_seq(h)", "crowd_count", "crowd_qom", "density", "centroid_x", "centroid_y", "flow_x", "flow_y", "dispersion"],
+      "nota": "1.2 — bundle propio por frame; ver seccion crowd"
     },
     "/harmocap/v1/meta": {
       "typetags": "shhifsish hh h",

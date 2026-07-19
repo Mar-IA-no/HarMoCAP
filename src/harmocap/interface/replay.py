@@ -46,9 +46,14 @@ def load_session(path: Path) -> list[dict]:
 
 
 def frame_to_wire(d: dict, first_seq: int, queued_us: int) -> list[bytes]:
-    """Contrato 1.1: devuelve UN bundle POR PERSONA del frame (lista)."""
+    """Contratos 1.1/1.2: bundle por persona + bundle crowd si el frame lo trae."""
     bundles: list[bytes] = []
     seq = first_seq
+    if d.get("crowd"):
+        bundles.append(osc_codec.build_crowd_bundle(
+            stream_id=d["stream_id"], captured_frame_id=d["captured_frame_id"],
+            bundle_seq=seq, crowd=d["crowd"]))
+        seq += 1
     for p in d.get("persons", []):
         if not p.get("present"):
             pw = {"slot_id": p["slot_id"], "present": False}

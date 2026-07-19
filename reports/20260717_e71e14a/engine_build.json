@@ -1,26 +1,39 @@
 {
-  "checkpoint": "yolo26m-pose.pt",
+  "checkpoint": "harmocap-m-pose-ft2.pt",
   "export_args": {
     "format": "engine",
     "half": true,
     "device": 0,
-    "imgsz": 640
+    "imgsz": 1280,
+    "dynamic": true,
+    "batch": 1
   },
   "claim": "engine construido con flag half=True (build log); sin auditor\u00eda de precisi\u00f3n por-capa",
-  "export_s": 211.6,
-  "engine_path": "yolo26m-pose.engine",
-  "engine_final": "/mnt/m2-1TB/HarMoCAP/outputs/yolo26m-pose.engine",
-  "engine_sha256": "2d48d04dc0955c56becfdfc2e32d364c37135fc15e099b3c6c8b2ed125de1aeb",
-  "engine_bytes": 47171916,
+  "export_s": 113.6,
+  "engine_path": "harmocap-m-pose-ft2.engine",
+  "engine_final": "/mnt/m2-1TB/HarMoCAP/outputs/harmocap-m-pose-ft2.engine",
+  "engine_sha256": "743f603680d5c44889576ab62698e63dc5857de98a6146d59d22d833f2b9a402",
+  "engine_bytes": 49379512,
   "inference_test": {
-    "ok": true,
-    "n_persons": 3,
-    "speed_ms": {
-      "preprocess": 2.4676956236362457,
-      "inference": 2.5344714522361755,
-      "postprocess": 0.6027482450008392
+    "imgsz_640": {
+      "ok": true,
+      "n_persons": 4,
+      "speed_ms": {
+        "preprocess": 2.8757471591234207,
+        "inference": 3.06842103600502,
+        "postprocess": 0.5048457533121109
+      }
+    },
+    "imgsz_1280": {
+      "ok": true,
+      "n_persons": 4,
+      "speed_ms": {
+        "preprocess": 3.5049207508563995,
+        "inference": 5.990026518702507,
+        "postprocess": 0.3362521529197693
+      }
     }
   },
-  "inference_s": 0.1,
-  "commit": "e71e14a90ba6643055a4a82e4b3741333b2e59ad"
+  "inference_s": 0.3,
+  "commit": "010829f4ec0aa3126964c146a6f6cc09f13da48a"
 }

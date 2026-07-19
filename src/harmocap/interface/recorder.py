@@ -23,7 +23,8 @@ from harmocap.schema import (
 
 
 def frame_to_dict(frame: MovementFrame, calib: CalibrationProfile | None,
-                  *, contract_id: str, config_hash: str, model_id: str) -> dict:
+                  *, contract_id: str, config_hash: str, model_id: str,
+                  crowd: dict | None = None) -> dict:
     """Proyección MovementFrame → dict serializable (contrato de grabación)."""
     d = {
         "schema_version": SCHEMA_VERSION,
@@ -49,6 +50,8 @@ def frame_to_dict(frame: MovementFrame, calib: CalibrationProfile | None,
     if calib is not None:
         d["calibration_params"] = dict(zip(CALIBRATION_PARAM_ORDER, calib.params))
         d["calibration_effective_from"] = calib.effective_from_frame_id
+    if crowd:
+        d["crowd"] = crowd            # bloque 1.2 (opcional en el schema)
     for p in frame.persons:
         pd = {"slot_id": p.slot_id, "present": p.present}
         if p.present:

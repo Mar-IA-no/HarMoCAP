@@ -59,11 +59,13 @@ class PoseBackend:
                 "conf": self.conf, "max_det": self.max_det,
                 "tracker": self.tracker}
 
-    def track_frame(self, frame) -> tuple[list[Detection], dict, tuple[int, int]]:
-        """Un frame BGR → (detecciones, speed_ms, (frame_w, frame_h)).
+    def track_frame(self, frame) -> tuple[list[Detection], list[tuple],
+                                          dict, tuple[int, int]]:
+        """Un frame BGR → (detecciones trackeadas, RAW bboxes, speed, (w, h)).
 
-        boxes.id None → lista vacía de Detection con track_id (addendum #5:
-        no se emite slot provisional; se espera al tracker).
+        - trackeadas: solo con track_id (addendum #5: sin slot provisional).
+        - raw_boxes: TODAS las detecciones (con y sin id) como xywhn — para los
+          agregados de multitud (H4b: el recall de masa las necesita).
         """
         h, w = frame.shape[:2]
         results = self.model.track(
@@ -72,6 +74,7 @@ class PoseBackend:
             tracker=self.tracker)
         res = results[0]
         dets: list[Detection] = []
+        raw_boxes: list[tuple] = []
         kpts, boxes = res.keypoints, res.boxes
         if kpts is not None and boxes is not None and len(boxes) > 0:
             n = len(boxes)
@@ -81,6 +84,7 @@ class PoseBackend:
             xywhn = boxes.xywhn
             if tuple(xy.shape) != (n, 17, 2):
                 raise ValueError(f"forma keypoints inesperada: {tuple(xy.shape)}")
+            raw_boxes = [tuple(float(v) for v in xywhn[i]) for i in range(n)]
             if ids is not None:
                 for i in range(n):                        # alineación por índice
                     iso = [(float(x) / h, float(y) / h,
@@ -90,4 +94,4 @@ class PoseBackend:
                         track_id=int(ids[i]),
                         bbox_xywhn=tuple(float(v) for v in xywhn[i]),
                         keypoints_iso=iso))
-        return dets, dict(res.speed), (w, h)
+        return dets, raw_boxes, dict(res.speed), (w, h)

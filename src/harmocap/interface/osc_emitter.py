@@ -87,14 +87,26 @@ class OscEmitter:
             self._send(cal)
         self._last_hello_us = mono_us()
 
-    # -- emisión por frame (contrato 1.1: un bundle POR PERSONA) ---------------
-    def emit(self, frame: MovementFrame, persons_wire: list[dict]
-             ) -> list[TransportEnvelope]:
-        """Emite un bundle atómico por cada persona/tombstone del frame."""
+    # -- emisión por frame (1.1: bundle POR PERSONA; 1.2: + bundle crowd) ------
+    def emit(self, frame: MovementFrame, persons_wire: list[dict],
+             crowd: dict | None = None) -> list[TransportEnvelope]:
+        """Emite un bundle por persona/tombstone + el bundle crowd (1.2)."""
         now = mono_us()
         if now - self._last_hello_us > self.hello_rebroadcast_us:
             self._broadcast_handshake()   # rebroadcast periódico (r5 #2)
         envs: list[TransportEnvelope] = []
+        if crowd:
+            self._seq += 1
+            cenv = TransportEnvelope(bundle_seq=self._seq,
+                                     queued_for_send_at_us=mono_us())
+            cb = osc_codec.build_crowd_bundle(
+                stream_id=frame.stream_id,
+                captured_frame_id=frame.captured_frame_id,
+                bundle_seq=self._seq, crowd=crowd)
+            self._send(cb)
+            cenv.sent_at_us = mono_us()
+            cenv.wire_bytes = len(cb)
+            envs.append(cenv)
         for pw in persons_wire:
             self._seq += 1
             env = TransportEnvelope(bundle_seq=self._seq,

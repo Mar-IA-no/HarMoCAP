@@ -1,4 +1,36 @@
-# INTERFACE_SPEC — Contrato HarMoCAP → Nico (v1.1)
+# INTERFACE_SPEC — Contrato HarMoCAP → Nico (v1.2)
+
+> **Cambio 1.1→1.2:** nuevo mensaje `/harmocap/v1/crowd` con agregados de
+> MULTITUD (la masa como un solo instrumento) + el productor ahora corre en dos
+> modos (grupo/masa) — el wire no cambia de forma, solo se agrega el mensaje.
+> `contract_id` nuevo: actualizá el kit completo.
+
+## Multitud (`/harmocap/v1/crowd`, 1.2)
+
+Un bundle propio por frame con 8 agregados calculados sobre **todas** las
+personas detectadas (incluye las que no llegan a slot — en masa importa el
+recall). Emitido siempre, en ambos modos:
+
+| Campo | Rango | Qué es |
+|---|---|---|
+| `crowd_count` | int | personas detectadas crudas — **NO** es el `n_persons` de `/meta` (ese cuenta slots, máx 8) |
+| `crowd_qom` | 0..1 | cuánto se mueve la masa en conjunto |
+| `density` | 0..1 | fracción del frame ocupada por gente |
+| `centroid_x/y` | iso | centro de masa del grupo |
+| `flow_x/y` | -1..1 | hacia dónde deriva el grupo |
+| `dispersion` | 0..1 | 0 = apiñados · 1 = desparramados |
+
+Idea de mapeo: la focal lleva la melodía; `crowd_qom`/`density` llevan la
+intensidad/densidad armónica; `flow` panea. Fixture: `examples/fixtures/crowd.jsonl`.
+
+## Modos del productor (informativo)
+
+- **grupo** (default): ≤8 personas con identidad reforzada (tracker con
+  apariencia + reasociación de slots): los slots sobreviven oclusiones y
+  salidas breves de cuadro mucho mejor que en 1.1.
+- **masa**: resolución de inferencia alta y recall máximo; los 8 slots siguen
+  (los mayores) + el mensaje crowd es el protagonista.
+Para tu receptor AMBOS modos son idénticos en el wire.
 
 > **Este es el documento que define cómo HarMoCAP entrega los datos de movimiento
 > corporal.** La fuente de verdad machine-readable es `osc_contract.v1.json`

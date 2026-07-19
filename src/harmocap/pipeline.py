@@ -41,14 +41,35 @@ def _percentiles(xs: list[float]) -> dict:
 class HarmocapPipeline:
     def __init__(self, repo_root: str | Path, *, source: int | str = 0,
                  record_to: str | Path | None = None,
-                 osc_destinations: list[tuple[str, int]] | None = None):
+                 osc_destinations: list[tuple[str, int]] | None = None,
+                 mode: str = "group"):
         self.repo = Path(repo_root)
         cfg = lambda name: yaml.safe_load((self.repo / "configs" / f"{name}.yaml").read_text())
         self.cfg_model = cfg("model")
         self.cfg_smooth = cfg("smoothing")
-        self.cfg_ident = cfg("identity")["slot"]
+        cfg_ident_full = cfg("identity")
+        self.cfg_ident = cfg_ident_full["slot"]
+        self.cfg_reacq = cfg_ident_full.get("reacquisition", {})
         self.cfg_feat = cfg("features")
         self.cfg_osc = cfg("osc")["osc"]
+
+        # H4: perfil de modo (group|crowd) sobreescribe model/tracker/identity
+        self.mode = mode
+        mode_file = self.repo / "configs" / "modes" / f"{mode}.yaml"
+        mode_cfg = yaml.safe_load(mode_file.read_text())
+        ov = mode_cfg.get("overrides", {})
+        if "model" in ov:
+            m_ov = dict(ov["model"])
+            m_ov.pop("imgsz_fallback", None)
+            self.cfg_model["model"].update(m_ov)
+            self._imgsz_fallback = ov["model"].get("imgsz_fallback")
+        else:
+            self._imgsz_fallback = None
+        if "tracker" in ov:
+            self.cfg_model["tracker"]["name"] = ov["tracker"]["name"]
+        if "identity" in ov:
+            self.cfg_reacq["enabled"] = ov["identity"].get(
+                "reacquisition_enabled", self.cfg_reacq.get("enabled", True))
 
         manifest = (self.repo / "schemas" / "osc_contract.v1.json")
         import json as _json
@@ -60,11 +81,18 @@ class HarmocapPipeline:
 
         self.stream_id = new_stream_id()
         m = self.cfg_model["model"]
+        from harmocap.perception import resolve_device
+        eff_imgsz = m["imgsz"]
+        if self._imgsz_fallback and not resolve_device(m["device"]).startswith("cuda"):
+            eff_imgsz = self._imgsz_fallback   # crowd en mps/cpu: 960 (sin engine)
+        tracker_name = self.cfg_model["tracker"]["name"]
+        if "/" in tracker_name:                # tracker propio (configs/…): ruta absoluta
+            tracker_name = str(self.repo / tracker_name)
         self.backend = PoseBackend(
             realtime_checkpoint=str(self.repo / m["realtime_checkpoint"]),
             fallback_checkpoint=m["fallback_checkpoint"], device=m["device"],
-            imgsz=m["imgsz"], conf=m["conf"], max_det=m["max_det"],
-            tracker=self.cfg_model["tracker"]["name"])
+            imgsz=eff_imgsz, conf=m["conf"], max_det=m["max_det"],
+            tracker=tracker_name)
 
         self.camera = LatchingCamera(source)
         self._oe = self.cfg_smooth["one_euro"]
@@ -75,7 +103,11 @@ class HarmocapPipeline:
             release_timeout_ms=self.cfg_ident["release_timeout_ms"],
             acquire_rule=self.cfg_ident["acquire_rule"],
             auto_focus_switch_ratio=self.cfg_ident.get("auto_focus_switch_ratio", 1.20),
-            tombstone_repeat_frames=self.cfg_ident["tombstone_repeat_frames"])
+            tombstone_repeat_frames=self.cfg_ident["tombstone_repeat_frames"],
+            reacquisition=self.cfg_reacq)
+        from harmocap.crowd import CrowdAggregator
+        self.crowd = CrowdAggregator()
+        self.last_crowd: dict = {}
         self.calib = CalibrationManager(self.cfg_feat["calibration"]["fallback"],
                                         period_ms=self.cfg_feat["calibration"]["period_ms"])
         # instancias POR SLOT (contrato 1.1): se crean/resetean con slot_reset
@@ -135,9 +167,12 @@ class HarmocapPipeline:
         frame_img, captured_frame_id, captured_at_us = got
         self.metrics["frames"] += 1
 
-        dets, speed, (w, h) = self.backend.track_frame(frame_img)
+        dets, raw_boxes, speed, (w, h) = self.backend.track_frame(frame_img)
         events = self.slots.update(dets, captured_at_us)
         focused = self.slots.focused_slot
+        # H4b: agregados de multitud sobre detecciones CRUDAS (recall)
+        self.last_crowd = self.crowd.update(raw_boxes, captured_at_us,
+                                            aspect=w / h if h else 16 / 9)
 
         persons: list[PersonState] = []
         persons_wire: list[dict] = []
@@ -192,7 +227,7 @@ class HarmocapPipeline:
             calibration_generation=self.calib.profile.generation,
             calibration_state=self.calib.profile.state, persons=tuple(persons))
 
-        envs = self.emitter.emit(mf, persons_wire)
+        envs = self.emitter.emit(mf, persons_wire, crowd=self.last_crowd)
         if envs:
             last = envs[-1]
             self.metrics["emitted"] += len(envs)
@@ -207,7 +242,8 @@ class HarmocapPipeline:
             self.recorder.put(frame_to_dict(
                 mf, self.calib.profile, contract_id=self.contract_id,
                 config_hash=self.config_hash,
-                model_id=Path(self.backend.loaded_checkpoint).name))
+                model_id=Path(self.backend.loaded_checkpoint).name,
+                crowd=self.last_crowd))
         # frame para el overlay opcional (run_realtime --show)
         self.last_frame_img = frame_img
         self.last_persons = persons

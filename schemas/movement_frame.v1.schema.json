@@ -39,6 +39,21 @@
       "additionalProperties": false
     },
     "calibration_effective_from": {"type": "integer"},
+    "crowd": {
+      "type": "object",
+      "required": ["crowd_count", "crowd_qom", "density", "centroid_x", "centroid_y", "flow_x", "flow_y", "dispersion"],
+      "properties": {
+        "crowd_count": {"type": "integer", "minimum": 0},
+        "crowd_qom": {"type": "number"},
+        "density": {"type": "number"},
+        "centroid_x": {"type": "number"},
+        "centroid_y": {"type": "number"},
+        "flow_x": {"type": "number"},
+        "flow_y": {"type": "number"},
+        "dispersion": {"type": "number"}
+      },
+      "additionalProperties": false
+    },
     "n_persons": {"type": "integer", "minimum": 0},
     "keypoint_order": {"type": "array", "items": {"type": "string"}, "minItems": 17, "maxItems": 17},
     "feature_order": {"type": "array", "items": {"type": "string"}, "minItems": 21, "maxItems": 21},

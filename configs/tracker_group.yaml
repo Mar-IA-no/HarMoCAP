@@ -1,0 +1,19 @@
+# Tracker del MODO GRUPO (H4a, capa 1): BoT-SORT + ReID
+# Identidad sagrada para ≤8 personas: apariencia re-asocia tras oclusión.
+tracker_type: botsort
+track_high_thresh: 0.25
+track_low_thresh: 0.1
+new_track_thresh: 0.25
+track_buffer: 120        # capa 2: ~4 s de memoria de ocluidos (default 30 ≈ 1 s);
+                         # el riesgo de asociación errada lo mitiga la capa 3 (slots)
+match_thresh: 0.8
+fuse_score: True
+gmc_method: sparseOptFlow  # SE MANTIENE (autoauditoría H4 #2): el banco de validación
+                           # es cámara en mano; auto-degrada a identidad al fallar.
+                           # Para instalación Beacon con cámara FIJA: cambiar a `none`
+                           # (menos costo, cero falsos de compensación).
+proximity_thresh: 0.5
+appearance_thresh: 0.8   # default = CONSERVADOR (autoauditoría H4 #3): bajarlo
+                         # facilita FUSIONES de identidad, peor que separar.
+with_reid: True          # capa 1: embedding de apariencia
+model: auto              # reusa features del detector (sin encoder extra)

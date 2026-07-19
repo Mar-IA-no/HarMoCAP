@@ -21,8 +21,22 @@ REPO = Path(__file__).resolve().parent.parent
 OUT = REPO / "outputs"
 OUT.mkdir(exist_ok=True)
 
-PROD_CHECKPOINT = "yolo26m-pose.pt"     # modelo canónico de tiempo real (AGENTS.md)
-EXPORT_ARGS = dict(format="engine", half=True, device=0, imgsz=640)
+import argparse
+
+_ap = argparse.ArgumentParser()
+_ap.add_argument("--checkpoint", default="yolo26m-pose.pt",
+                 help="checkpoint a exportar (default: preentrenado)")
+_ap.add_argument("--name", default=None,
+                 help="nombre base del engine en outputs/ (default: stem del checkpoint)")
+_ARGS = _ap.parse_args()
+
+PROD_CHECKPOINT = _ARGS.checkpoint
+ENGINE_NAME = (_ARGS.name or Path(PROD_CHECKPOINT).stem) + ".engine"
+# dynamic=True (H4-P0): engine válido en el RANGO de resoluciones — el modo
+# grupo infiere a 640 y el modo masa a 1280 con el MISMO engine. El export de
+# M1 era estático a 640 y habría hecho caer el modo masa al .pt silenciosamente.
+EXPORT_ARGS = dict(format="engine", half=True, device=0, imgsz=1280,
+                   dynamic=True, batch=1)
 
 
 def current_run_dir() -> Path:
@@ -48,22 +62,26 @@ def main() -> int:
     log["engine_path"] = str(engine_path)
 
     # mover el engine a outputs/ (ruta canónica de configs/model.yaml)
-    final = OUT / "yolo26m-pose.engine"
+    final = OUT / ENGINE_NAME
     if engine_path.resolve() != final.resolve():
         engine_path.replace(final)
     log["engine_final"] = str(final)
     log["engine_sha256"] = hashlib.sha256(final.read_bytes()).hexdigest()
     log["engine_bytes"] = final.stat().st_size
 
-    print("[2/3] prueba de carga + inferencia del engine…")
+    print("[2/3] prueba de carga + inferencia del engine a 640 Y 1280 (dinámico)…")
     t0 = time.time()
     engine = YOLO(str(final))
-    res = engine.predict(str(OUT / "bus.jpg"), device=0, verbose=False)
-    log["inference_test"] = {
-        "ok": True,
-        "n_persons": 0 if res[0].keypoints is None else int(res[0].keypoints.xy.shape[0]),
-        "speed_ms": res[0].speed,
-    }
+    log["inference_test"] = {}
+    for sz in (640, 1280):
+        res = engine.predict(str(OUT / "bus.jpg"), device=0, imgsz=sz,
+                             verbose=False)
+        log["inference_test"][f"imgsz_{sz}"] = {
+            "ok": True,
+            "n_persons": 0 if res[0].keypoints is None
+            else int(res[0].keypoints.xy.shape[0]),
+            "speed_ms": res[0].speed,
+        }
     log["inference_s"] = round(time.time() - t0, 1)
 
     print("[3/3] registrando build log en reports/…")

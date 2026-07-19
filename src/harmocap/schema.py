@@ -17,8 +17,15 @@ import secrets
 from dataclasses import dataclass, field
 from enum import IntEnum
 
-SCHEMA_VERSION = "1.1.0"   # 1.1: multi-persona, bundle por persona, focused
+SCHEMA_VERSION = "1.2.0"   # 1.2: + features de multitud (/crowd); 1.1: multi-persona
 FEATURE_SET_VERSION = "1.0.0"
+
+# Orden canónico de los agregados de multitud (contrato 1.2). crowd_count es un
+# int; el resto floats. NO confundir con n_persons de /meta (slots emitidos).
+CROWD_FIELDS: tuple[str, ...] = (
+    "crowd_count", "crowd_qom", "density", "centroid_x", "centroid_y",
+    "flow_x", "flow_y", "dispersion",
+)
 LAYOUT_VERSION = "1"
 PRODUCER_VERSION = "0.1.0"
 OSC_NAMESPACE = "/harmocap/v1"

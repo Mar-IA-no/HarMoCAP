@@ -230,3 +230,20 @@ def test_math_isfinite_everywhere_in_synthetic_session():
         for person in d["persons"]:
             for v in person.get("features", []):
                 assert v is None or math.isfinite(v)
+
+
+# ---------------------------------------------------------------- crowd (1.2)
+def test_crowd_bundle_roundtrip_and_size():
+    crowd = {"crowd_count": 42, "crowd_qom": 0.31, "density": 0.55,
+             "centroid_x": 0.9, "centroid_y": 0.48, "flow_x": -0.2,
+             "flow_y": 0.05, "dispersion": 0.61}
+    data = osc_codec.build_crowd_bundle(
+        stream_id="aabbccdd00112233", captured_frame_id=100, bundle_seq=7,
+        crowd=crowd)
+    assert len(data) <= osc_codec.MAX_DATAGRAM_BYTES
+    (addr, args), = osc_codec.decode_bundle(data)
+    assert addr == "/harmocap/v1/crowd"
+    assert args[0] == "aabbccdd00112233" and args[1] == 100 and args[2] == 7
+    assert args[3] == 42                       # crowd_count int
+    assert args[4] == pytest.approx(0.31, abs=1e-4)
+    assert args[10] == pytest.approx(0.61, abs=1e-4)

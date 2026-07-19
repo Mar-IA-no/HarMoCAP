@@ -3,9 +3,11 @@
 # exportado en M1 (no el .pt, que invalidaría el benchmark de latencia).
 
 model:
-  # Checkpoint canónico de tiempo real (AGENTS.md: YOLO26m-pose)
-  realtime_checkpoint: "outputs/yolo26m-pose.engine"   # exportado por scripts/export_model.py
-  fallback_checkpoint: "yolo26m-pose.pt"               # si no existe el engine (se registra cuál se cargó)
+  # PROMOCIÓN ft2 (H4-P0, 2026-07-18): fine-tune CrowdPose+COCO30k, cumplió
+  # ambos umbrales GO/NO-GO (+2.96 CrowdPose / −0.70 COCO) y la revisión visual
+  # del usuario. Engine DINÁMICO (válido 640 grupo / 1280 masa).
+  realtime_checkpoint: "outputs/harmocap-m-pose-ft2.engine"
+  fallback_checkpoint: "harmocap-m-pose-ft2.pt"        # Mac/CPU (raíz del repo)
   smoke_checkpoint: "yolo26n-pose.pt"                  # SOLO smoke-test del workflow (M0/M1)
   imgsz: 640
   device: "auto"        # cuda:0 (NVIDIA) / mps (Apple Silicon) / cpu — autodetecta

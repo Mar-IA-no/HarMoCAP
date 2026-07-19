@@ -1,0 +1,10 @@
+# MODO MASA: recall manda, identidad individual secundaria (H4b)
+mode: crowd
+overrides:
+  model:
+    imgsz: 1280            # en CUDA (engine dinámico); el pipeline baja a 960 en mps/cpu
+    imgsz_fallback: 960    # para mps/cpu (sin engine)
+  tracker:
+    name: "bytetrack.yaml" # barato; la identidad individual no importa en masa
+  identity:
+    reacquisition_enabled: false

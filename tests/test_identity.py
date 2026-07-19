@@ -122,3 +122,93 @@ def test_single_slot_compat():
     # el incumbente retiene aunque entre otro más grande
     ev = slots_of(sm.update([det(9, area=0.1), det(11, area=0.9)], US + DT))
     assert ev[0].detection.track_id == 9
+
+
+# ---------------------------------------------------------- H4a: reasociación
+def rdet(track_id, cx=0.5, cy=0.5, area=0.04):
+    w = area ** 0.5
+    return Detection(track_id=track_id, bbox_xywhn=(cx, cy, w, w),
+                     keypoints_iso=KP)
+
+
+def _rq_manager(**over):
+    rq = {"enabled": True, "max_pred_dist": 0.2, "pred_dist_growth_per_s": 0.1,
+          "size_ratio_max": 1.8, "edge_margin": 0.06, "edge_gate_dist": 0.3,
+          "teleport_reset_dist": 0.25}
+    rq.update(over)
+    return SlotManager(max_slots=4, occlusion_grace_ms=2000,
+                       release_timeout_ms=5000, reacquisition=rq)
+
+
+def test_reacquisition_near_prediction_same_slot():
+    """Oclusión interior → track NUEVO cerca de la posición → MISMO slot."""
+    sm = _rq_manager()
+    t = US
+    for _ in range(5):                       # establecer velocidad ~0
+        sm.update([rdet(7, cx=0.5)], t); t += DT
+    sm.update([], t); t += DT                # se ocluye
+    sm.update([], t); t += DT
+    ev = {e.slot_id: e for e in sm.update([rdet(99, cx=0.53)], t)}
+    assert 0 in ev and ev[0].detection.track_id == 99   # re-bindeado al slot 0
+    assert ev[0].rebound and not ev[0].slot_reset       # sin teleport → sin reset
+    assert sm.rebind_count == 1
+
+
+def test_reacquisition_far_gets_new_slot():
+    """Track nuevo LEJOS de la predicción → slot nuevo, no roba el ausente."""
+    sm = _rq_manager()
+    t = US
+    for _ in range(3):
+        sm.update([rdet(7, cx=0.2)], t); t += DT
+    sm.update([], t); t += DT
+    ev = {e.slot_id: e for e in sm.update([rdet(99, cx=0.9)], t)}
+    assert 1 in ev and ev[1].detection.track_id == 99    # slot NUEVO (1)
+    assert 0 not in ev or ev[0].detection is None
+
+
+def test_reacquisition_edge_gating():
+    """Salió por la izquierda → solo reaparece por la izquierda."""
+    sm = _rq_manager()
+    t = US
+    for _ in range(3):
+        sm.update([rdet(7, cx=0.05)], t); t += DT       # pegado al borde izq
+    sm.update([], t); t += DT                            # sale de cuadro
+    # reaparece por la DERECHA: NO debe re-bindear
+    ev = {e.slot_id: e for e in sm.update([rdet(99, cx=0.95)], t)}
+    assert ev.get(0) is None or ev[0].detection is None
+    t += DT
+    # reaparece por la IZQUIERDA: SÍ
+    ev = {e.slot_id: e for e in sm.update([rdet(50, cx=0.08)], t)}
+    assert 0 in ev and ev[0].detection.track_id == 50 and ev[0].rebound
+
+
+def test_reacquisition_teleport_triggers_reset():
+    """Re-bind con salto grande → slot_reset=True (One-Euro+features)."""
+    sm = _rq_manager(max_pred_dist=0.6, teleport_reset_dist=0.2)
+    t = US
+    for _ in range(3):
+        sm.update([rdet(7, cx=0.3)], t); t += DT
+    sm.update([], t); t += DT
+    ev = {e.slot_id: e for e in sm.update([rdet(99, cx=0.75)], t)}
+    assert 0 in ev and ev[0].rebound and ev[0].slot_reset
+
+
+def test_reacquisition_size_gate():
+    """Bbox de tamaño muy distinto no se re-bindea (otra persona)."""
+    sm = _rq_manager()
+    t = US
+    for _ in range(3):
+        sm.update([rdet(7, cx=0.5, area=0.01)], t); t += DT
+    sm.update([], t); t += DT
+    ev = {e.slot_id: e for e in sm.update([rdet(99, cx=0.5, area=0.09)], t)}
+    assert not any(e.rebound for e in ev.values())
+
+
+def test_reacquisition_disabled():
+    sm = _rq_manager(enabled=False)
+    t = US
+    for _ in range(3):
+        sm.update([rdet(7, cx=0.5)], t); t += DT
+    sm.update([], t); t += DT
+    ev = {e.slot_id: e for e in sm.update([rdet(99, cx=0.52)], t)}
+    assert 1 in ev and not any(e.rebound for e in ev.values())

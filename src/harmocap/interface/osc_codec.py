@@ -302,3 +302,23 @@ def build_person_bundle(*, stream_id: str, captured_frame_id: int, bundle_seq: i
 def build_select(slot: int) -> bytes:
     """Comando de selección de foco (al puerto de control): slot 0..7, -1=auto."""
     return encode_bundle([encode_message(f"{OSC_NAMESPACE}/control/select", [int(slot)])])
+
+
+def build_crowd_bundle(*, stream_id: str, captured_frame_id: int,
+                       bundle_seq: int, crowd: dict) -> bytes:
+    """Contrato 1.2: agregados de multitud en su propio bundle por frame.
+
+    crowd: dict con las claves de schema.CROWD_FIELDS. crowd_count va como int;
+    el resto como float32. Entra holgado en un datagrama.
+    """
+    msg = encode_message(f"{OSC_NAMESPACE}/crowd", [
+        stream_id, ("h", captured_frame_id), ("h", bundle_seq),
+        int(crowd["crowd_count"]), float(crowd["crowd_qom"]),
+        float(crowd["density"]), float(crowd["centroid_x"]),
+        float(crowd["centroid_y"]), float(crowd["flow_x"]),
+        float(crowd["flow_y"]), float(crowd["dispersion"]),
+    ])
+    bundle = encode_bundle([msg])
+    if len(bundle) > MAX_DATAGRAM_BYTES:
+        raise ValueError(f"crowd bundle {len(bundle)} B > {MAX_DATAGRAM_BYTES}")
+    return bundle

@@ -22,6 +22,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
 
+from harmocap.crowd import CrowdAggregator  # noqa: E402
 from harmocap.features import CalibrationManager, FeatureExtractor  # noqa: E402
 from harmocap.interface.recorder import frame_to_dict  # noqa: E402
 from harmocap.interface import osc_codec  # noqa: E402
@@ -112,6 +113,7 @@ class SyntheticRunner:
             json.loads((REPO / "schemas" / "osc_contract.v1.json").read_text()))
         self.t_us = 1_000_000            # arranque del reloj monótono sintético
         self.frame_id = 0
+        self.crowd_agg = CrowdAggregator()
 
     def _slot(self, sid: int):
         if sid not in self._smoothers:
@@ -121,7 +123,8 @@ class SyntheticRunner:
 
     def frame_multi(self, slots: dict, *, focused_slot: int = 0,
                     tombstones: set[int] = frozenset(),
-                    drop_conf: set[int] = frozenset()) -> dict:
+                    drop_conf: set[int] = frozenset(),
+                    extra_raw_boxes: list | None = None) -> dict:
         """slots: {slot_id: raw_kps}. Genera un frame multi-persona."""
         self.t_us += DT_US
         self.frame_id += 1
@@ -162,9 +165,13 @@ class SyntheticRunner:
             frame_w=FRAME_W, frame_h=FRAME_H, fps=float(FPS),
             calibration_generation=self.calib.profile.generation,
             calibration_state=self.calib.profile.state, persons=tuple(persons))
+        raw = [tuple(p.bbox) for p in persons if p.present]
+        raw += [tuple(b) for b in (extra_raw_boxes or [])]
+        crowd = self.crowd_agg.update(raw, self.t_us, aspect=FRAME_W / FRAME_H)
         return frame_to_dict(mf, self.calib.profile,
                              contract_id=self.contract_id,
-                             config_hash=CONFIG_HASH, model_id=MODEL_ID)
+                             config_hash=CONFIG_HASH, model_id=MODEL_ID,
+                             crowd=crowd)
 
     def frame(self, raw_kps, *, present=True, drop_conf: set[int] = frozenset()
               ) -> dict:
@@ -237,6 +244,21 @@ def main() -> int:
     for i in range(FPS * 4):            # segunda mitad: foco en slot 1
         fx.append(two((i + 120) / FPS, 1))
     write_jsonl(REPO / "examples" / "fixtures" / "two_persons.jsonl", fx)
+
+    print("[synthetic] fixture multitud simulada (contrato 1.2)…")
+    r = SyntheticRunner(STREAM_ID)
+    fx = []
+    for i in range(FPS * 4):
+        t = i / FPS
+        # 24 cajas fantasma orbitando (masa) + 1 esqueleto real
+        boxes = []
+        for k in range(24):
+            ang = 2 * math.pi * (k / 24 + 0.05 * t)
+            boxes.append((0.5 + 0.3 * math.cos(ang), 0.5 + 0.3 * math.sin(ang),
+                          0.05, 0.12))
+        fx.append(r.frame_multi({0: skeleton(t)}, focused_slot=0,
+                                extra_raw_boxes=boxes))
+    write_jsonl(REPO / "examples" / "fixtures" / "crowd.jsonl", fx)
 
     print("[synthetic] OK")
     return 0

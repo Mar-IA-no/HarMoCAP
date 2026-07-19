@@ -1,11 +1,11 @@
 {
   "backend": {
-    "loaded_checkpoint": "/mnt/m2-1TB/HarMoCAP/outputs/yolo26m-pose.engine",
+    "loaded_checkpoint": "/mnt/m2-1TB/HarMoCAP/outputs/harmocap-m-pose-ft2.engine",
     "is_engine": true,
     "imgsz": 640,
-    "conf": 0.25,
-    "max_det": 8,
-    "tracker": "bytetrack.yaml"
+    "conf": 0.05,
+    "max_det": 300,
+    "tracker": "/mnt/m2-1TB/HarMoCAP/configs/tracker_group.yaml"
   },
   "capture_profile": {
     "source": "outputs/test_video.mp4",
@@ -16,26 +16,26 @@
     "buffersize_req": 1,
     "fourcc": 877677894
   },
-  "capture_dropped": 10,
+  "capture_dropped": 41,
   "recorder_dropped": null,
-  "frames": 799,
-  "emitted": 2879,
+  "frames": 408,
+  "emitted": 2278,
   "lat_sw_ms": {
-    "p50": 6.949,
-    "p95": 7.635,
-    "p99": 8.102,
-    "mean": 6.9963291666666665,
-    "n": 720
+    "p50": 27.069,
+    "p95": 30.709,
+    "p99": 32.454,
+    "mean": 27.163647222222224,
+    "n": 360
   },
   "jitter_ms": {
-    "p50": 0.26,
-    "p95": 0.795,
-    "p99": 1.64,
-    "mean": 0.31596805555555557,
-    "n": 720
+    "p50": 0.804,
+    "p95": 3.975,
+    "p99": 5.658,
+    "mean": 1.2762222222222221,
+    "n": 360
   },
-  "stream_id": "0f31b37fc82aae22",
-  "contract_id": "82c51ab25ce36876c982a6afb19e5cf7",
-  "focused_slot": 2,
-  "focus_mode": "manual"
+  "stream_id": "5c90e36fa317e4c4",
+  "contract_id": "9bf08a0d45b3adc747e0cbe1d61bcad4",
+  "focused_slot": 0,
+  "focus_mode": "auto"
 }

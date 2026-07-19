@@ -1,0 +1,54 @@
+{
+  "videoplayback (5).mp4": {
+    "a_bytetrack": {
+      "unique_track_ids": 255,
+      "slot_switches": 101,
+      "rebinds": 0,
+      "slot_switches_per_min": 55.7,
+      "frames": 3263,
+      "proc_fps": 136.4
+    },
+    "b_botsort_reid": {
+      "unique_track_ids": 214,
+      "slot_switches": 83,
+      "rebinds": 0,
+      "slot_switches_per_min": 45.8,
+      "frames": 3263,
+      "proc_fps": 32.8
+    },
+    "c_botsort_reid_reasoc": {
+      "unique_track_ids": 214,
+      "slot_switches": 20,
+      "rebinds": 255,
+      "slot_switches_per_min": 11.0,
+      "frames": 3263,
+      "proc_fps": 33.1
+    }
+  },
+  "videoplayback.mp4": {
+    "a_bytetrack": {
+      "unique_track_ids": 850,
+      "slot_switches": 135,
+      "rebinds": 0,
+      "slot_switches_per_min": 56.3,
+      "frames": 4315,
+      "proc_fps": 123.1
+    },
+    "b_botsort_reid": {
+      "unique_track_ids": 849,
+      "slot_switches": 121,
+      "rebinds": 0,
+      "slot_switches_per_min": 50.5,
+      "frames": 4315,
+      "proc_fps": 30.1
+    },
+    "c_botsort_reid_reasoc": {
+      "unique_track_ids": 849,
+      "slot_switches": 20,
+      "rebinds": 856,
+      "slot_switches_per_min": 8.3,
+      "frames": 4315,
+      "proc_fps": 29.9
+    }
+  }
+}

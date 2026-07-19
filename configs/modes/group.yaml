@@ -1,0 +1,9 @@
+# MODO GRUPO (default): ≤8 personas, identidad sagrada (H4a)
+mode: group
+overrides:
+  model:
+    imgsz: 640
+  tracker:
+    name: "configs/tracker_group.yaml"   # BoT-SORT + ReID + buffer largo
+  identity:
+    reacquisition_enabled: true          # capa 3: reasociación de slots

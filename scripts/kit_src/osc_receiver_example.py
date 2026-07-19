@@ -68,6 +68,8 @@ class ContractReceiver:
             self._on_hello(msgs[0][1])
         elif addr0.endswith("/calibration"):
             self._on_calibration(msgs[0][1])
+        elif addr0.endswith("/crowd"):
+            self._on_crowd(msgs[0][1])
         elif addr0.endswith("/meta"):
             self._on_frame(msgs)
 
@@ -146,6 +148,31 @@ class ContractReceiver:
                      if now_ms - t > LEASE_MS]:
             del self.last_data_ms[slot]
             self.on_absent(slot)
+
+    def _on_crowd(self, a: list) -> None:
+        """Contrato 1.2: agregados de multitud (stream, frame, seq, 8 campos).
+
+        IMPORTANTE: /crowd también consume bundle_seq — hay que contabilizarlo
+        en el descarte monotónico o cada crowd parecería un bundle perdido.
+        """
+        if a[0] != self.stream_id:
+            self._reset_stream(a[0])
+        seq = a[2]
+        if seq <= self.last_seq:
+            self.stats["dropped_old"] += 1
+            return
+        if self.last_seq >= 0 and seq > self.last_seq + 1:
+            self.stats["lost"] += seq - self.last_seq - 1
+        self.last_seq = seq
+        self.on_crowd({"crowd_count": a[3], "crowd_qom": a[4], "density": a[5],
+                       "centroid_x": a[6], "centroid_y": a[7],
+                       "flow_x": a[8], "flow_y": a[9], "dispersion": a[10]})
+
+    def on_crowd(self, crowd: dict) -> None:
+        """REEMPLAZAR: agregados de multitud (la masa como UN instrumento)."""
+        if not self.quiet:
+            print(f"[crowd] n={crowd['crowd_count']} qom={crowd['crowd_qom']:.2f} "
+                  f"densidad={crowd['density']:.2f} disp={crowd['dispersion']:.2f}")
 
     # ------------------------------------------------------------- tu mapeo
     def on_movement(self, slot: int, p: dict, meta: list) -> None:

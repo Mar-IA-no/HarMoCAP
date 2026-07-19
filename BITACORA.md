@@ -91,3 +91,27 @@ Implementacion: `SlotManager` (generaliza el slot principal: asignacion lowest-f
 Verificacion: 43/43 tests (SlotManager: asignacion/histeresis/tombstones/foco/compat max_slots=1; wire: bundle por persona <=1200 B peor caso, focused, control/select, golden nuevo; kit: aislamiento con Python del sistema). E2E real: video de 30 s con ~4-7 personas -> engine TensorRT -> 2879 bundles multi-persona; foco automatico en slot 0, `/control/select 2` enviado por UDP en vivo -> foco migro al slot 2 (modo manual) verificado en el wire y en el reporte del pipeline. Latencia software con multi-persona: p50 6.9 ms (sin degradacion vs una persona).
 
 Nota operativa: si el kit 1.0 ya fue entregado a Nico, debe reemplazarse por el regenerado (el cambio de contract_id es deliberado).
+
+## 2026-07-18 - S6 - Promocion ft2 + Hito 4: identidad robusta (modo grupo) y modo masa (contrato 1.2)
+
+**Promocion ft2** (H4-P0): el fine-tune CrowdPose+COCO30k cumplio ambos umbrales GO/NO-GO (+2.96 AP CrowdPose / -0.70 COCO, umbral +1.5/-1.0) y paso la revision visual del usuario. Re-export a TensorRT **dinamico** (`dynamic=True`, valido 640 y 1280 — el engine M1 era estatico a 640 y el modo masa habria caido silenciosamente al .pt): `outputs/harmocap-m-pose-ft2.engine` (49 MB, sha en `reports/20260717_e71e14a/engine_build.json`). `configs/model.yaml` promovido (realtime=engine ft2, fallback=`harmocap-m-pose-ft2.pt`, conf 0.05 y max_det 300 por decision del usuario). Smoke e2e verificado: `is_engine: true`, receptor del kit 0 gated / 0 lost.
+
+**Hito 4** (plan v2 autoauditado; implementado en automode por directiva del usuario):
+
+- **Modo grupo** (`--mode group`, default): tres capas contra la perdida de identidad. (1) BoT-SORT+ReID `model: auto` + (2) `track_buffer 120` (`configs/tracker_group.yaml`); (3) reasociacion a nivel SLOT en `identity.py`: prediccion de posicion (pos+vel EMA con incertidumbre creciente), gate de tamano, gating por borde de salida, teleport-reset de smoother+features; umbrales auditables en `configs/identity.yaml` seccion `reacquisition`.
+- **Modo masa** (`--mode crowd`): imgsz 1280 (engine dinamico), ByteTrack, y **contrato 1.2**: nuevo mensaje `/harmocap/v1/crowd` (bundle propio por frame, emitido en AMBOS modos) con 8 agregados sobre TODAS las detecciones crudas (crowd_count, crowd_qom, density, centroid, flow, dispersion) — `src/harmocap/crowd.py`, causal, ventanas trailing. Bumps: schema 1.2.0, contract_id nuevo (kit 1.1 gatea el stream 1.2 a proposito), manifiesto+golden+JSON Schema+INTERFACE_SPEC+kit regenerado con fixture `crowd.jsonl`.
+- Fix de contabilidad en el receptor de referencia: `/crowd` consume `bundle_seq` y debe integrarse al descarte monotonico (sin eso, cada crowd contaba como bundle perdido).
+
+**Validacion de identidad** (`scripts/eval_tracking.py`, proxy sin ground truth documentado; `reports/20260717_e71e14a/tracking_identity_eval.json`), videos de baile `Biblioteca/test/two`:
+
+| Config | IDs unicos (v1/v2) | slot-switches/min (v1/v2) | fps proceso 3090 |
+|---|---|---|---|
+| (a) ByteTrack (baseline MVP) | 255 / 850 | 55.7 / 56.3 | 123-136 |
+| (b) BoT-SORT+ReID buffer120 | 214 / 849 | 45.8 / 50.5 | 30-33 |
+| (c) (b) + reasociacion slots | 214 / 849 | **11.0 / 8.3** | 30-33 |
+
+Reduccion monotona (a)→(c): -80%/-85% de slot-switches (255/856 rebinds logrados por la capa 3). **Overhead ReID+GMC: ~4x** (136→33 fps de proceso en 3090) — sigue >=30 fps o sea tiempo real, pero al borde; en Mac (mps) el modo grupo probablemente no sostenga 30 fps con ReID: knob documentado (`with_reid: False` o `gmc_method: none` para camara fija). Renders de inspeccion visual con slot-ID coloreado (a vs c) en `Biblioteca/test/two_slots_render/` para veredicto del usuario.
+
+Verificacion: 54/54 tests (reasociacion: rebind cerca de prediccion, rechazo lejos, gating de borde, teleport-reset; crowd: agregados sintenticos; wire crowd bundle; kit isolation). Memoria de supervision ft1 eliminada (hito 3 cerrado).
+
+Pendiente (usuario): veredicto visual sobre los renders de slots; decision de tuning (`appearance_thresh`, `track_buffer`) tras uso real; reenvio del kit 1.2 a Nico.
