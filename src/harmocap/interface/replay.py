@@ -23,6 +23,9 @@ import sys
 import time
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))  # robusto ante -I
+# (Python >=3.11: -I implica -P y NO agrega el dir del script a sys.path;
+#  sin este insert, `python -I replay.py` en el kit no encuentra osc_codec)
 try:                                     # en el kit (archivo plano al lado) —
     import osc_codec  # type: ignore     # SIEMPRE preferir el codec local del kit
 except ImportError:                      # en el repo

@@ -16,4 +16,10 @@ proximity_thresh: 0.5
 appearance_thresh: 0.8   # default = CONSERVADOR (autoauditoría H4 #3): bajarlo
                          # facilita FUSIONES de identidad, peor que separar.
 with_reid: True          # capa 1: embedding de apariencia
-model: auto              # reusa features del detector (sin encoder extra)
+model: yolo26n-cls.pt    # encoder ReID EXPLÍCITO (autoauditoría h4 M1): `auto`
+                         # solo reusa features del detector con backend .pt; con
+                         # el engine TensorRT ultralytics degrada SILENCIOSAMENTE
+                         # a descargar yolo26n-cls.pt — pineado para que Mac
+                         # (.pt) y 3090 (.engine) usen el MISMO encoder y la
+                         # eval H4c transfiera entre backends. El .pt vive en la
+                         # raíz del repo (gitignored; se descarga solo 1a vez).

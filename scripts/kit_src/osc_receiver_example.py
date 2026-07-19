@@ -164,6 +164,10 @@ class ContractReceiver:
         if self.last_seq >= 0 and seq > self.last_seq + 1:
             self.stats["lost"] += seq - self.last_seq - 1
         self.last_seq = seq
+        if self._gated():
+            self.stats["gated"] += 1   # crowd TAMBIÉN gatea por handshake
+            return
+        self.stats["bundles"] += 1
         self.on_crowd({"crowd_count": a[3], "crowd_qom": a[4], "density": a[5],
                        "centroid_x": a[6], "centroid_y": a[7],
                        "flow_x": a[8], "flow_y": a[9], "dispersion": a[10]})

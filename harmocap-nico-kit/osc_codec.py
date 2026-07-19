@@ -273,8 +273,9 @@ def build_person_bundle(*, stream_id: str, captured_frame_id: int, bundle_seq: i
     8 slots sin exceder MTU). person: {slot_id, present, focused,
     keypoints_blob, kp_state_blob, bbox(4 floats), features_blob,
     feat_state_blob}. Tombstone (present=0): SOLO present (r4 #11).
-    El receptor ensambla el frame por (captured_frame_id, slot); n_persons
-    en /meta dice cuántos bundles esperar para ese frame."""
+    El receptor ensambla el frame por (captured_frame_id, slot); n_persons en
+    /meta cuenta SLOTS presentes — los tombstones y el bundle /crowd del mismo
+    frame consumen seq propio y NO cuentan ahí (h4 B2)."""
     msgs = [encode_message(f"{OSC_NAMESPACE}/meta", [
         stream_id, ("h", captured_frame_id), ("h", bundle_seq), n_persons,
         float(fps), contract_id, calibration_generation, calibration_state,

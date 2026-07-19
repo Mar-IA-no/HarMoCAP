@@ -75,9 +75,12 @@ class HarmocapPipeline:
         import json as _json
         man = _json.loads(manifest.read_text())
         self.contract_id = osc_codec.contract_id_from_manifest(man)
+        # h4 M4: mode y reacquisition DEBEN entrar al hash — dos runs con gates
+        # distintos no pueden compartir config_hash (trazabilidad del contrato)
         self.config_hash = osc_codec.canonical_json_hash(
             {"model": self.cfg_model, "smoothing": self.cfg_smooth,
-             "identity": self.cfg_ident, "features": self.cfg_feat})
+             "identity": self.cfg_ident, "features": self.cfg_feat,
+             "reacquisition": self.cfg_reacq, "mode": self.mode})
 
         self.stream_id = new_stream_id()
         m = self.cfg_model["model"]
@@ -168,7 +171,8 @@ class HarmocapPipeline:
         self.metrics["frames"] += 1
 
         dets, raw_boxes, speed, (w, h) = self.backend.track_frame(frame_img)
-        events = self.slots.update(dets, captured_at_us)
+        events = self.slots.update(dets, captured_at_us,
+                                   aspect=w / h if h else 16 / 9)
         focused = self.slots.focused_slot
         # H4b: agregados de multitud sobre detecciones CRUDAS (recall)
         self.last_crowd = self.crowd.update(raw_boxes, captured_at_us,

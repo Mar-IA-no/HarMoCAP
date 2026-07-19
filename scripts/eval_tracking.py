@@ -66,9 +66,9 @@ def eval_config(video: Path, name: str, cfg: dict) -> dict:
             break
         frames += 1
         t_us += int(1e6 / fps)
-        dets, _raw, _speed, _wh = backend.track_frame(frame)
+        dets, _raw, _speed, (fw, fh) = backend.track_frame(frame)
         ids_seen.update(d.track_id for d in dets)
-        for ev in slots.update(dets, t_us):
+        for ev in slots.update(dets, t_us, aspect=fw / fh if fh else 16 / 9):
             if ev.slot_reset and ev.detection is not None and not ev.rebound:
                 slot_switches += 1
     cap.release()

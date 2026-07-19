@@ -57,7 +57,7 @@ def render(video: Path, name: str, cfg: dict, out_dir: Path) -> Path:
             break
         t_us += int(1e6 / fps)
         dets, _raw, _speed, _wh = backend.track_frame(frame)
-        for ev in slots.update(dets, t_us):
+        for ev in slots.update(dets, t_us, aspect=w / h if h else 16 / 9):
             if ev.detection is None:
                 continue
             cx, cy, bw, bh = ev.detection.bbox_xywhn

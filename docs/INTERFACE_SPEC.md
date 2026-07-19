@@ -23,6 +23,12 @@ recall). Emitido siempre, en ambos modos:
 Idea de mapeo: la focal lleva la melodía; `crowd_qom`/`density` llevan la
 intensidad/densidad armónica; `flow` panea. Fixture: `examples/fixtures/crowd.jsonl`.
 
+Reglas del receptor para `/crowd`: consume `bundle_seq` (entra en el descarte
+monotónico como cualquier bundle) y **gatea por handshake igual que los frames
+de persona** — el mensaje no lleva `contract_id` propio, así que sin
+`/hello`+`/calibration` coincidentes no debe consumirse. `crowd_qom`/`flow` se
+miden en unidades isotrópicas por segundo (VMAX de normalización: 1.5 y 0.8).
+
 ## Modos del productor (informativo)
 
 - **grupo** (default): ≤8 personas con identidad reforzada (tracker con
@@ -151,7 +157,7 @@ con la confianza del modelo YOLO.
 | 6 | `smoothness_l` | 0..1 | movimiento suave de mano izq (0 = entrecortado) |
 | 7 | `smoothness_r` | 0..1 | ídem derecha |
 | 8 | `symmetry` | 0..1 | postura simétrica respecto del eje corporal |
-| 9 | `verticality` | **-1..1** | 1 erguido · 0 horizontal · -1 invertido |
+| 9 | `verticality` | **-1..1** | 1 erguido · 0 horizontal · -1 invertido — ÚNICO rango firmado; la sesión de ejemplo lo ejercita hasta ≈-0.97 (fase de inversión): validá tus bounds contra ella |
 | 10-11 | `angle_elbow_l/r` | 0..1 | brazo extendido (0 = plegado); ángulo/π |
 | 12-13 | `angle_knee_l/r` | 0..1 | pierna extendida |
 | 14-15 | `angle_shoulder_l/r` | 0..1 | brazo levantado/alejado del torso |

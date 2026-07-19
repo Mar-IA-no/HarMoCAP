@@ -199,11 +199,22 @@ def main() -> int:
     for i in range(FPS * 6):    # B: brazos suben → expansion↑
         u = min(1.0, i / (FPS * 2))
         frames.append(r.frame(skeleton((i + 180) / FPS, arms_up=u)))
-    for i in range(FPS * 6):    # C: inclinación lateral → verticality↓
-        lean = 0.6 * math.sin(2 * math.pi * 0.15 * i / FPS)
+    for i in range(FPS * 3):    # C1: inclinación lateral → verticality↓
+        lean = 0.6 * math.sin(2 * math.pi * 0.3 * i / FPS)
         frames.append(r.frame(skeleton((i + 360) / FPS, arms_up=1.0, lean=lean)))
+    for i in range(FPS * 3):    # C2: inversión → verticality NEGATIVA.
+        # Hallazgo de campo (bitácora Nico S14): verticality es el ÚNICO rango
+        # firmado (-1..1) y ningún fixture lo ejercitaba — un consumidor con
+        # bounds (0,1) pasaba todos los tests y explotaba con datos vivos.
+        lean = min(1.0, i / (FPS * 1.5)) * 2.9
+        frames.append(r.frame(skeleton((i + 450) / FPS, lean=lean)))
     for i in range(FPS * 6):    # D: balanceo rápido de brazos → qom/vel↑
         frames.append(r.frame(skeleton((i + 540) / FPS, sway=0.10)))
+    # invariante: la sesión DEBE ejercitar verticality negativa (ver C2)
+    min_vert = min(p["features"][9] for f in frames for p in f.get("persons", [])
+                   if p.get("features") and p["features"][9] is not None)
+    assert min_vert < -0.2, f"C2 no produjo verticality negativa ({min_vert})"
+    print(f"[synthetic] min verticality en sesión: {min_vert:.2f} (rango firmado ejercitado)")
     write_jsonl(REPO / "examples" / "session_v1.jsonl", frames)
 
     print("[synthetic] fixture lifecycle (oclusión→held/invalid→tombstone)…")

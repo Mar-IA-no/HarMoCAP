@@ -274,3 +274,21 @@ Smoke test E2E real (2 corridas): (1) GPU — stack completo arriba, escena even
 La opcion `--harmocap-device cpu` queda como fallback operativo mientras el crash CUDA intermitente no se resuelva (hipotesis: driver 550.163.01 viejo; update de driver pendiente como mantenimiento separado).
 
 Pendiente sin cambios: re-ensayo en vivo con Nico (F5-A2, ahora es un solo comando), ensayo audible del shaper, lease recovery del engine.
+
+## 2026-07-18 - S6b - Autoauditoria H4 aplicada + hallazgos de campo de Nico integrados
+
+Autoauditoria adversarial post-implementacion (agente independiente sobre el commit de H4): 1 hallazgo alto, 7 medios, 3 bajos. Todos los accionables aplicados:
+
+- **A1 (alto)**: la rama "salida por borde" del matcher de reasociacion no gateaba distancia — cualquier entrada por el mismo borde a cualquier altura podia fusionarse con el slot ausente (el error exacto que la capa debia impedir). Fix: gate de distancia tambien en la rama edge + test de regresion que aisla el caso (A entra por arriba-izq, B por abajo-izq → slot nuevo).
+- **M2**: gates y features de crowd median en coords anisotropicas (x/ancho): en 16:9 el gate x era ~1.78x mas permisivo. Fix: distancias isotropicas (aspect propagado a `SlotManager.update()` y `CrowdAggregator`).
+- **M6**: `_exit_edge_of` aproximaba semiancho con sqrt(area)/2 (sesgo con bboxes de persona, altas). Fix: w/2, h/2 reales.
+- **M1**: `model: auto` del tracker NO reusa features del detector con backend TensorRT — ultralytics degrada silenciosamente a descargar `yolo26n-cls.pt`. Fix: encoder ReID pineado explicito (mismo encoder en Mac .pt y 3090 .engine; verificado que reproduce los numeros de la eval).
+- **M3**: el test de gating por borde pasaba aunque el mecanismo estuviera roto (el gate interior producia los mismos resultados). Fix: umbrales que aislan el mecanismo.
+- **M4**: `config_hash` no cubria `reacquisition` ni `mode`. Fix: agregados al hash.
+- **M5**: el receptor de referencia consumia `/crowd` sin gating de handshake ni contabilidad. Fix: gatea y cuenta; regla documentada en spec.
+- **M7**: `CrowdAggregator` computaba flow/qom contra baselines fuera de ventana tras gaps. Fix: push-antes-de-leer + clear en escena vacia.
+- B1/B2 documentados (ruido de qom con conteos cambiantes; semantica n_persons en docstring).
+
+**Re-validacion post-fix** (tabla actualizada en `tracking_identity_eval.json`): (a) 55.7/56.3 → (b) 45.8/50.5 → (c) **14.3/10.4** slot-switches/min (221/653 rebinds). Las configs a y b REPRODUCEN exacto (banco estable); c empeoro levemente vs la corrida pre-fix (11.0/8.3) porque los gates estrictos rechazan reasociaciones que antes pasaban — parte de esas eran precisamente las fusiones A1/M2. Para musica, fusionar identidades es peor que separarlas: trade-off correcto. 55/55 tests.
+
+**Integracion del merge con Nico**: el espejo AlterMundi traia 12 commits de Nico (ecosistema harmonic-weaver/shaper/beacon-spatial + ensayo fisico en vivo consumiendo HarMoCAP 1.1). Merge resuelto (BITACORA con doble numeracion S6 documentada; su realtime_metrics preservado como `realtime_metrics_nico_v4l2.json`). De su bitacora S14 salio un hallazgo que nos toca: `verticality` es el UNICO rango firmado (-1..1) y ningun fixture lo ejercitaba — su manifiesto con bounds (0,1) paso todos los tests y exploto con datos vivos. Fix nuestro: fase C2 de inversion en la sesion sintetica (min verticality -0.97, con assert de invariante en el generador), nota en spec, kit regenerado. Coordinacion pendiente cuando vuelva Mariano: el salto a contrato 1.2 gatea el stream para el kit 1.1 que Nico usa en vivo — hay que sincronizar actualizacion de kit + manifiesto del driver harmocap en harmonic-weaver.

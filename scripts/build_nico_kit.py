@@ -37,6 +37,7 @@ COPIES = [
     ("examples/fixtures/calibration.jsonl", "examples/fixtures/calibration.jsonl"),
     ("examples/fixtures/stream_restart.jsonl", "examples/fixtures/stream_restart.jsonl"),
     ("examples/fixtures/two_persons.jsonl", "examples/fixtures/two_persons.jsonl"),
+    ("examples/fixtures/crowd.jsonl", "examples/fixtures/crowd.jsonl"),
 ]
 
 REQUIREMENTS = "python-osc==1.9.3\n"

@@ -42,6 +42,18 @@ def test_kit_isolation(kit_built, tmp_path):
     assert "TODO OK" in proc.stdout
 
 
+def test_kit_scripts_run_as_main_under_isolated_python(kit_built, tmp_path):
+    """replay/receiver como SCRIPT con `-I` (Python>=3.11: -I implica -P y no
+    agrega el dir del script a sys.path — regresión real detectada en smoke)."""
+    dest = tmp_path / "kit3"
+    shutil.copytree(kit_built, dest)
+    for script in ("replay.py", "osc_receiver_example.py"):
+        proc = subprocess.run([SYS_PYTHON, "-I", script, "--help"],
+                              cwd=dest, capture_output=True, text=True,
+                              timeout=60)
+        assert proc.returncode == 0, f"{script}: {proc.stderr}"
+
+
 def test_kit_never_imports_heavy_deps(kit_built, tmp_path):
     """Ningún módulo del kit importa numpy/scipy/cv2/ultralytics/harmocap."""
     dest = tmp_path / "kit2"

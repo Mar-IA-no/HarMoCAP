@@ -40,22 +40,33 @@ class CrowdAggregator:
         """raw_boxes_xywhn: TODAS las detecciones (xc,yc,w,h normalizados)."""
         n = len(raw_boxes_xywhn)
         if n == 0:
-            self._centers.push(t_us, [])
+            # escena vacía: los baselines de movimiento dejan de ser válidos
+            # (autoauditoría h4 M7 — sin esto, flow/qom se computaban contra un
+            # snapshot anterior al gap, fuera de la ventana declarada)
+            self._centers.clear()
+            self._centroid.clear()
             return {"crowd_count": 0, "crowd_qom": 0.0, "density": 0.0,
                     "centroid_x": 0.0, "centroid_y": 0.0,
                     "flow_x": 0.0, "flow_y": 0.0, "dispersion": 0.0}
 
-        centers = [(b[0], b[1]) for b in raw_boxes_xywhn]
+        # centros en coords ISOTRÓPICAS (x escala por aspect; h4 M2 — qom/flow/
+        # dispersion se median en unidades anisotrópicas)
+        centers = [(b[0] * aspect, b[1]) for b in raw_boxes_xywhn]
         cx = sum(c[0] for c in centers) / n
         cy = sum(c[1] for c in centers) / n
         density = _clip(sum(b[2] * b[3] for b in raw_boxes_xywhn), 0.0, 1.0)
+        semidiag = ((aspect * aspect + 1.0) ** 0.5) / 2.0
         disp = (sum(((c[0] - cx) ** 2 + (c[1] - cy) ** 2) ** 0.5
-                    for c in centers) / n) / 0.7071    # semidiagonal de [0,1]²
+                    for c in centers) / n) / semidiag
         disp = _clip(disp, 0.0, 1.0)
 
-        # qom colectivo: velocidad media de centros contra el snapshot trailing
-        old = self._centers.oldest()
+        # qom colectivo: velocidad media de centros contra el snapshot trailing.
+        # push PRIMERO (poda la ventana) y baseline después (h4 M7).
+        # Nota (h4 B1): sin correspondencia por identidad, la ENTRADA de una
+        # persona nueva aporta su distancia al vecino más cercano — con conteos
+        # muy cambiantes es ruido estructural asumido del modo masa.
         self._centers.push(t_us, centers)
+        old = self._centers.oldest()
         qom = 0.0
         if old is not None and old[1]:
             t0, prev = old
@@ -71,9 +82,9 @@ class CrowdAggregator:
                 qom = (total / n) / dt
         qom = _clip(qom / self.CROWD_QOM_VMAX, 0.0, 1.0)
 
-        # flujo del centroide
-        old_c = self._centroid.oldest()
+        # flujo del centroide (push primero: poda la ventana — h4 M7)
         self._centroid.push(t_us, (cx, cy))
+        old_c = self._centroid.oldest()
         fx = fy = 0.0
         if old_c is not None:
             t0, (px, py) = old_c
@@ -82,9 +93,8 @@ class CrowdAggregator:
                 fx = _clip((cx - px) / dt / self.FLOW_VMAX, -1.0, 1.0)
                 fy = _clip((cy - py) / dt / self.FLOW_VMAX, -1.0, 1.0)
 
-        # centroid en coords isotrópicas (x escala por aspect)
         return {"crowd_count": n, "crowd_qom": round(qom, 4),
                 "density": round(density, 4),
-                "centroid_x": round(cx * aspect, 4), "centroid_y": round(cy, 4),
+                "centroid_x": round(cx, 4), "centroid_y": round(cy, 4),
                 "flow_x": round(fx, 4), "flow_y": round(fy, 4),
                 "dispersion": round(disp, 4)}

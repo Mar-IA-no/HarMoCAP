@@ -51,6 +51,7 @@ class _Slot:
     # H4a — estado para reasociación:
     last_center: tuple[float, float] | None = None
     last_area: float = 0.0
+    last_wh: tuple[float, float] = (0.0, 0.0)
     vel: tuple[float, float] = (0.0, 0.0)     # EMA de velocidad del centro (norm/s)
     last_seen_us: int = 0
     exit_edge: str = "none"                   # left|right|top|bottom|none
@@ -137,6 +138,7 @@ class SlotManager:
                             slot.vel[1] * (1 - _VEL_EMA) + vy * _VEL_EMA)
         slot.last_center = (cx, cy)
         slot.last_area = det.area
+        slot.last_wh = (det.bbox_xywhn[2], det.bbox_xywhn[3])
         slot.last_seen_us = t_us
 
     def _exit_edge_of(self, slot: _Slot) -> str:
@@ -145,21 +147,28 @@ class SlotManager:
             return "none"
         cx, cy = slot.last_center
         m = self.rq_edge_margin
-        # aproximamos con el centro ± semiancho: usamos área para el semiancho
-        half = (slot.last_area ** 0.5) / 2.0
-        if cx - half <= m:
+        # semiancho/semialto REALES de la última bbox (autoauditoría h4 M6:
+        # sqrt(area)/2 sobreestimaba x y subestimaba y en bboxes de persona)
+        half_w = slot.last_wh[0] / 2.0
+        half_h = slot.last_wh[1] / 2.0
+        if cx - half_w <= m:
             return "left"
-        if cx + half >= 1.0 - m:
+        if cx + half_w >= 1.0 - m:
             return "right"
-        if cy - half <= m:
+        if cy - half_h <= m:
             return "top"
-        if cy + half >= 1.0 - m:
+        if cy + half_h >= 1.0 - m:
             return "bottom"
         return "none"
 
-    def _reacquisition_score(self, slot: _Slot, det: Detection, t_us: int
-                             ) -> float | None:
-        """None si no pasa los gates; si pasa, distancia (menor = mejor)."""
+    def _reacquisition_score(self, slot: _Slot, det: Detection, t_us: int,
+                             aspect: float = 1.0) -> float | None:
+        """None si no pasa los gates; si pasa, distancia (menor = mejor).
+
+        Todas las distancias en unidades ISOTRÓPICAS (fracción del alto): las x
+        normalizadas por ancho se escalan por `aspect` (autoauditoría h4 M2 —
+        sin esto el gate x era ~1.78x más permisivo en 16:9).
+        """
         if slot.last_center is None:
             return None
         dt = max((t_us - slot.last_seen_us) / 1e6, 0.0)
@@ -169,29 +178,35 @@ class SlotManager:
             if ratio > self.rq_size_ratio_max:
                 return None
         cx, cy = det.bbox_xywhn[0], det.bbox_xywhn[1]
+        gate = self.rq_max_pred_dist + self.rq_growth_per_s * dt
         if slot.exit_edge != "none":
-            # salió por un borde: debe reaparecer cerca del MISMO borde
-            edge_dist = {"left": cx, "right": 1.0 - cx,
+            # salió por un borde: debe reaparecer cerca del MISMO borde…
+            edge_dist = {"left": cx * aspect, "right": (1.0 - cx) * aspect,
                          "top": cy, "bottom": 1.0 - cy}[slot.exit_edge]
             if edge_dist > self.rq_edge_gate_dist:
                 return None
-            # distancia a la última posición conocida (sin predicción: al salir
-            # de cuadro la velocidad extrapolada no es confiable)
-            dx = cx - slot.last_center[0]
+            # …Y cerca de la última posición conocida (sin predicción: al salir
+            # de cuadro la velocidad extrapolada no es confiable). Autoauditoría
+            # h4 A1: sin este gate, cualquier entrada por el mismo borde a
+            # cualquier altura se fusionaba con el slot ausente.
+            dx = (cx - slot.last_center[0]) * aspect
             dy = cy - slot.last_center[1]
-            return (dx * dx + dy * dy) ** 0.5
+            dist = (dx * dx + dy * dy) ** 0.5
+            if dist > gate:
+                return None
+            return dist
         # oclusión interior: gate por posición PREDICHA con incertidumbre creciente
         px = slot.last_center[0] + slot.vel[0] * dt
         py = slot.last_center[1] + slot.vel[1] * dt
-        dx, dy = cx - px, cy - py
+        dx, dy = (cx - px) * aspect, cy - py
         dist = (dx * dx + dy * dy) ** 0.5
-        gate = self.rq_max_pred_dist + self.rq_growth_per_s * dt
         if dist > gate:
             return None
         return dist
 
     # ----------------------------------------------------------------- update
-    def update(self, detections: list[Detection], t_us: int) -> list[SlotEvent]:
+    def update(self, detections: list[Detection], t_us: int,
+               aspect: float = 1.0) -> list[SlotEvent]:
         by_id = {d.track_id: d for d in detections if d.track_id is not None}
         events: list[SlotEvent] = []
         claimed: set[int] = set()
@@ -240,7 +255,8 @@ class SlotManager:
             pairs = []
             for det in unclaimed:
                 for sid in lost_slots:
-                    score = self._reacquisition_score(self._slots[sid], det, t_us)
+                    score = self._reacquisition_score(self._slots[sid], det,
+                                                      t_us, aspect)
                     if score is not None:
                         pairs.append((score, sid, det))
             pairs.sort(key=lambda p: (p[0], p[1], p[2].track_id))
@@ -251,7 +267,7 @@ class SlotManager:
                     continue
                 slot = self._slots[sid]
                 # teleport check: ¿el salto respecto de la última posición exige reset?
-                dx = det.bbox_xywhn[0] - slot.last_center[0]
+                dx = (det.bbox_xywhn[0] - slot.last_center[0]) * aspect
                 dy = det.bbox_xywhn[1] - slot.last_center[1]
                 teleport = (dx * dx + dy * dy) ** 0.5 > self.rq_teleport_dist
                 slot.state = SlotState.ACTIVE

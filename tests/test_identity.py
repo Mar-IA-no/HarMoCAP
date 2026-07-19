@@ -167,19 +167,41 @@ def test_reacquisition_far_gets_new_slot():
 
 
 def test_reacquisition_edge_gating():
-    """Salió por la izquierda → solo reaparece por la izquierda."""
-    sm = _rq_manager()
+    """Salió por la izquierda → solo reaparece por la izquierda.
+
+    Autoauditoría h4 M3: max_pred_dist alto para que el gate interior ACEPTE
+    los casos rechazados — así el test aísla el mecanismo de borde de verdad.
+    """
+    sm = _rq_manager(max_pred_dist=0.6)
     t = US
     for _ in range(3):
         sm.update([rdet(7, cx=0.05)], t); t += DT       # pegado al borde izq
     sm.update([], t); t += DT                            # sale de cuadro
-    # reaparece por la DERECHA: NO debe re-bindear
-    ev = {e.slot_id: e for e in sm.update([rdet(99, cx=0.95)], t)}
+    # reaparece en el INTERIOR (el gate interior aceptaría: dist 0.35 < 0.6;
+    # el de borde debe rechazar: edge_dist 0.4 > 0.3): NO re-bindea
+    ev = {e.slot_id: e for e in sm.update([rdet(99, cx=0.40)], t)}
     assert ev.get(0) is None or ev[0].detection is None
     t += DT
     # reaparece por la IZQUIERDA: SÍ
     ev = {e.slot_id: e for e in sm.update([rdet(50, cx=0.08)], t)}
     assert 0 in ev and ev[0].detection.track_id == 50 and ev[0].rebound
+
+
+def test_reacquisition_edge_exit_still_gates_distance():
+    """Autoauditoría h4 A1: mismo borde pero LEJOS a lo largo de él → NO fusionar.
+
+    A sale por la izquierda arriba; B entra por la izquierda abajo dentro de la
+    ventana: sin gate de distancia en la rama edge, B se fusionaba al slot de A.
+    """
+    sm = _rq_manager()
+    t = US
+    for _ in range(3):
+        sm.update([rdet(7, cx=0.05, cy=0.2)], t); t += DT
+    sm.update([], t); t += DT                            # A sale por la izq
+    ev = {e.slot_id: e for e in sm.update([rdet(99, cx=0.05, cy=0.85)], t)}
+    assert 1 in ev and ev[1].detection.track_id == 99    # slot NUEVO
+    assert ev.get(0) is None or ev[0].detection is None  # el de A no se roba
+    assert sm.rebind_count == 0
 
 
 def test_reacquisition_teleport_triggers_reset():
