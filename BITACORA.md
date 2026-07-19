@@ -115,3 +115,162 @@ Reduccion monotona (a)→(c): -80%/-85% de slot-switches (255/856 rebinds lograd
 Verificacion: 54/54 tests (reasociacion: rebind cerca de prediccion, rechazo lejos, gating de borde, teleport-reset; crowd: agregados sintenticos; wire crowd bundle; kit isolation). Memoria de supervision ft1 eliminada (hito 3 cerrado).
 
 Pendiente (usuario): veredicto visual sobre los renders de slots; decision de tuning (`appearance_thresh`, `track_buffer`) tras uso real; reenvio del kit 1.2 a Nico.
+---
+
+> **Nota de merge (2026-07-18, Claude):** desde aca abajo, entradas escritas por
+> Nico en el espejo AlterMundi (linea paralela, numeracion propia S6-S15 que
+> colisiona con la de arriba; se preservan sin renumerar). Integradas por merge
+> al detectar el push rechazado en el espejo.
+
+## 2026-07-18 - S6 - Re-arquitectura del ecosistema Beacon: arranca la orquestacion (Wave 1 completa)
+
+El usuario aprobo ejecutar el plan de `Biblioteca/rearquitectura-ecosistema-beacon/` (Fable) en modo orquestado: CompAII (Hermes/kimi-k3) despacha builds por ia-bridge y audita cada resultado; Codex Sol (gpt-5.6-sol xhigh) toma la ruta critica que el plan original asignaba a Claude (sin tokens). Documentos del modo en `Biblioteca/beacon-ecosystem-orchestration/` (README, ORCHESTRATION, GOALS, briefs/). Ledger: board Kanban `beacon-ecosystem-orch`.
+
+Infra previa (plano 2, ya en `feat/hermes-support` de ia-bridge-mcp, pusheado): `--effort`/`--max-turns` ahora llegan de verdad al agente (eran no-ops); codex con `-s workspace-write` (antes sandbox read-only: builds "exitosos" que no escribian); grok effort `high` (el CLI no acepta `max`); timeout default 3600 desde config; CLIs symlinkados en `~/.local/bin` (los shells no interactivos no veian `~/.npm-global/bin` — causa probable de fallos historicos de Robin).
+
+Wave 1 (5/5 cards done, todo auditado antes de commit):
+- T0.1 (codex Sol): `webui.py` de beacon-spatial vuelve a parsear; conflictos de merge resueltos conservando sensores + fix de ruta de grabacion. Verificado en vivo: Flask bootea, GET / y POST /control responden 200. Commit `ea8202f`.
+- T0.2 (kimi): digital-beacon saneado — dir `: RTK && ` (0 archivos), 37 symlinks rotos + `normalized_analysis/`, `.venv` duplicado (843 MB). `data/uploads/` y `sample_manager.py` intactos.
+- T0.3 (grok): README de beacon-spatial alineado al motor real (13 bandas SC, puerto 57120), tabla OSC de MEMORY.md corregida al esquema `/beacon/*/N`, `beacon-osc.ANNOTATIONS.md` para direcciones sin destino. Commit `aa90637` (+ `.grokignore`).
+- T2.1 (kimi): `harmonic-shaper` scaffolded y publicado — `nicoechaniz/harmonic-shaper` + `AlterMundi/harmonic-shaper`, `origin` con doble pushurl (esquema espejo, usuario decidio cuentas propias en vez de Mar-IA-no). Commit `f6b01ab`.
+- T6.1 (kimi): `ARCHIVE.md` en harmonic-beacon-tines, commiteado `bdb1984` y pusheado.
+
+Nota de proceso: el board se opera manual (dispatcher off); las transiciones las hace CompAII al despachar/auditar (single-writer). Status validos de este Kanban: no usar `in_progress` (termino Lattice) — usar `running`.
+
+## 2026-07-18 - S7 - Fase F0 completa + F1 en marcha (waves 2-3)
+
+F0 (saneamiento) cerrado al 100%: webui.py reparado (ea8202f), digital-beacon sin basura, docs alineados (aa90637), beacon-spatial con root = solo stack vigente (d816b7b).
+
+Wave 2: harmonic-weaver scaffolded (269bba3, repos nicoechaniz + AlterMundi, doble pushurl). T0.4 commiteado con dedupe byte-verificado.
+
+T1.1 (ruta critica, codex Sol): plantillas de contratos AMBOS planos en harmonic-weaver (a42fbc7) — Source Frame v1 (canales normalizados + estados observed|held|invalid generalizados) e Instrument Control v1 (namespaces nativos + state_sync bidireccional obligatorio + voice_model_alias OPCIONAL = resolucion del hibrido D1 del INFORME_CRUZADO). Codec stdlib copiable + 4/4 golden tests. Detalle menor: pyproject necesitaba [tool.pytest.ini_options] pythonpath=["src"] para que pytest corra sin install (agregado).
+
+Wave 3 en curso: T1.2 (codex Sol: manifiesto beacon-spatial + /beacon/state dump + host/puerto configurables), T4.1 (codex Sol: CORE_DESIGN + stage contract draft), T1.3 cerrada (grok): shaper.contract.json formalizando la superficie EXISTENTE (/digital/* + broadcast /beacon/*), con discrepancias reporte-vs-codigo documentadas (el codigo gana), codec byte-identico, 7/7 tests (a1218f8). digital-beacon con .grokignore (fa6dca7).
+
+Nota de proceso: codex Sol corre builds en paralelo en repos distintos sin conflicto; si aparece rate-limit, el fallback es re-dispatch secuencial.
+
+## 2026-07-18 - S8 - T1.2: beacon-spatial ya es instrumento formal (F1 completa para MVP)
+
+T1.2 (codex Sol) cerrada y verificada E2E EN VIVO por CompAII (el sandbox de codex no podia abrir UDP; la verificacion real se hizo desde el orquestador): scsynth + sclang boot reales, `OSCdefs registered: 71`, request `/beacon/state` con contract_id correcto -> dump atomico de 73 mensajes (begin + 66 valores + end), con `/beacon/master`=1.5 y `/beacon/gain/3`=2.2 reflejados. Commit `2a9d314`.
+
+Entregado: `beacon_spatial.contract.json` + golden (69 OSCdefs formalizados, sin voice_model_alias — el contraejemplo canonico del hibrido D1), dump de estado bidireccional gateado por contract_id con cola por requester, `/hello` con rebroadcast 1 Hz, listen configurable via BEACON_OSC_HOST/PORT (loopback por default, 0.0.0.0 abre remoto), tests 6/6, conftest.py para pytest sin hacks.
+
+F1 (contratos) queda completa para el MVP: beacon-spatial + shaper tienen manifiesto formal; harmonic-weaver define las plantillas. F2 (extraccion del shaper) es la proxima fase grande.
+
+## 2026-07-18 - S9 - Wave 4 extraction and source drivers
+
+T2.2 closed: the digital-beacon Shaper is now the standalone `harmonic-shaper` package (`795972d`). The extraction includes the 32-voice engine, state store, OSC receiver, API/WebSocket state surface, MIDI controls, and pure NumPy renderer. Audit evidence: isolated editable installation, 13 passing tests plus one optional-dependency skip, CLI argument surface, and a live headless HTTP API mutation/panic-release probe. No audible-output claim was made; R24 validation remains part of T4.5.
+
+T3.1 closed: `nature/` was migrated into beacon-spatial (`4532fa9`): ResonantFilter, SampleLayer, and the minimal vendorized `harmonic_mask` implementation. The source-tree `nh_analysis` dependency is absent. Audit evidence: 13 passing tests and a real synthetic separation probe with finite output and exact harmonic-plus-residual reconstruction.
+
+T4.3a and T4.3c closed in harmonic-weaver (`5616a2f`): HarMoCAP and ECG source drivers, including focus/state propagation, stream gating, lease behavior, ECG edge-trigger semantics, and 30 passing combined tests at integration.
+
+T4.3b was not closed: Kimi returned an explicit quota 403 after creating an untested partial MIDI driver. The partial work is being recovered through the active Codex GPT lane; it is not committed or accepted.
+
+## 2026-07-18 - S10 - Wave 5 en curso: T2.3, T2.4, T3.2 cerradas
+
+T4.3b recovered and closed: Codex rebuilt the partial MIDI driver (untracked file from the exhausted Kimi run was input, not trusted output). `harmonic-weaver` `d0d38f9`: hot-plug tolerant driver, lazy mido import, 10 focused tests, 40-test suite, real no-hardware probe emitting complete invalid Source Frame channels.
+
+T2.3 closed: native MIDI-note harmonic source in harmonic-shaper (`fefe142`). Dependency-free mapping ported from NaturalHarmony (`harmonics.py`/`key_mapper.py`); `--slave` remains optional; `/digital/*` unchanged. Audit evidence: 43 focused tests, 57-test suite, headless VoiceParameterStore probes, and an explicit same-band collision regression (notes 0 and 12 share band 1; superseded note-off must not silence the current owner).
+
+T3.2 closed: nature sample player in beacon-spatial (`39831c8`). `\sample_player` SynthDef mixed into the 13-band path; `/beacon/nature/load|gain|stop` with strict path validation; manifest extended to 74 OSCdefs with atomic state dump carrying nature fields. Audit evidence: 17 tests including a real UDP OSC-string type probe (sclang decodes OSC `s` as Symbol — the original handler's String-only guard rejected valid packets; now both textual types accepted, numerics/blobs still rejected) and a full orchestrator E2E: real scsynth+sclang, generated WAV load → gain 0.35 → state dump with active path → stop → empty path. Audible listening explicitly unconfirmed.
+
+T2.4 closed: clipping characterized, not hidden (`7f1dfc2`). Headless smoke suite with measured peak/RMS/full-scale counts for one-voice, 32-voice, and rapid-transition scenarios; live callback vs pure reference equivalence proven sample-exact in steady sections. Real fix: `synth_pure` erased release-tail gains (read -120 dB from inactive frames); now holds last active gain until envelope ends. Shared `soft_limit` (tanh*1.05*0.95) used by both renderers. Decision documented in `docs/CLIPPING_DIAGNOSIS.md`: keep 1/sqrt(N) + bounded limiter, no arbitrary normalization. 63 tests + 1 skip.
+
+Wave 5 remaining in flight: T4.2 (weaver engine, critical path, Codex Sol), T3.3 (beacon-only modulation split, Grok). Process note: this session ran gpt-5.6-terra then k3; both repairs (T3.2 string-type, T2.3 collision test) were dispatched as focused follow-up builds rather than accepting partially verified work.
+
+
+## 2026-07-18 - S11 - Wave 5 closed + archives complete (F6 done)
+
+T3.3 closed: beacon-only modulation split in beacon-spatial (`0a40191`). Four presets (spectrum-projection, harmonic-projection, consonance-gate, timbre-filter) validated against the formal 13-band manifest; band 0/14..32/q-on-13 rejected at validate time. Behavioral audit: all preset emissions in-contract, EWMA direction, runtime no-shaper-import check. Shaper-half explicitly deferred to F5.
+
+T4.2 closed — the critical path engine (`4b625b9`). Audit found the WS test silently skipped (fastapi undeclared in system python); isolated venv with declared deps gave 52 tests + 4 subtests with the WS round trip actually running. Live verification: uvicorn boot, real TCP WS handshake/gate/snapshot, route emit to native capability, panic latch gating routes, panic_reset safety dispatch to 5 voices, clear/recover. Evidence reports written by the engine itself.
+
+T3.4 closed (`de2768c`): both nature WAVs moved to beacon-spatial assets (gitignored, SHA-256 MANIFEST tracked); hashes verified.
+
+T6.2 closed by CompAII: §6 migration map fully verified on disk. T6.3 closed: ARCHIVE.md committed and pushed in digital-beacon (`ccce16c`, incl. final-state legacy gain fix a71a832) and NaturalHarmony (`22bd2ee`). F6 complete: tines + digital-beacon + NaturalHarmony all archived with destination maps.
+
+Remaining: T4.4 (patchbay, Codex in flight) → T4.5 (e2e rehearsal, never descoped; brief written with pre-verified inventory: 659 MB file-mode WAV present, two_persons fixture, ECG simulator, frogs sample in assets).
+
+
+## 2026-07-18 - S12 - T4.4 + T4.5: plan complete
+
+T4.4 closed: web patchbay (`b2f6796`). Codex reported honestly that its sandbox blocked loopback sockets, so the mandatory browser validation ran from the orchestrator: headless Chrome via CDP, populated engine, channel select -> patch created (verified in DOM and cross-checked against engine state over a second WS client), UI PANIC -> engine panic_active, clear/recover. Screenshots committed in reports/t44-patchbay-audit/. 54 tests + 4 subtests in isolated venv.
+
+T4.5 closed — the never-descoped gate: FULL REHEARSAL PASS live (`6d84203`, run t45-20260718T112715Z). 46/46 assertions, 125.3 s, exit 0. Beacon-spatial (file mode, 659 MB source) + headless shaper + weaver with 3 drivers + HarMoCAP two_persons replay + deterministic ECG stream. Event-demo scene: focus subject -> 5 shaper harmonics (wrists/ankles/head), crowd -> beacon master, ECG -> nature gain pulses, frogs sample loaded. Scene hot-swap to sparse and back; global panic latched (shaper voices released, beacon silence profile, routes gated 3 s) and clean recovery. Audio evidence: SC-recorded master WAV 109.3 s, 96.1% non-silence, all finite, peak 0.22. Audible human monitoring explicitly unverified, as declared.
+
+Two real bugs found by live audit, not by the agents: (1) runner.py Path.resolve() dereferenced the venv symlink and child processes lost site-packages (orchestrator fix); (2) LiveOSCTransport used asdict() on engine-frozen mappingproxy bindings -> TypeError after sendto on every route output, metrics counting 39736 phantom transport errors (Codex repair with regression test using real engine-frozen bindings).
+
+PLAN COMPLETE: all 26 Kanban cards done. F0-F4 + F6 of the beacon ecosystem re-architecture executed and verified. Remaining explicitly unverified (by design): human audible monitoring, R24 live input, real MIDI hardware, live people/cameras.
+
+
+## 2026-07-18 - S13 - Live test: cámara Logitech + auris R24
+
+Primer ensayo físico con Nicolás. Hardware: Logitech C920e (640x480 MJPEG), R24 auriculares (beacon file mode), notebook cam fallback. Software: beacon-spatial (file, 659MB), harmonic-shaper (audio real, sin --slave), weaver rehearsal runtime (lease_ms=2500, drivers harmocap+midi+ecg), HarMoCAP YOLO26m-pose CUDA (RTX 2060, fallback cu126 tras crash cu130).
+
+Stack: beacon via start-beacon.sh --file, shaper via /tmp/harmonic-shaper-audit venv con sounddevice, weaver runtime con fuentes instaladas + event-demo scene (7 rutas: 5 shaper + crowd beacon + ecg nature).
+
+Resultados:
+- Beacon crowd → master: FUNCIONA. 172 escrituras a /beacon/master con valores variables (0.38-0.73) sincronizados al movimiento corporal. Confirmación de ruteo vivo.
+- Shaper 5 voces (muñecas/tobillos/cabeza): NO DISPARAN. Ni con rutas directas (sin agregadores, min_confidence=0), ni con hold_then_reset. Causa no aislada completamente. La ruta crowd (mismo motor, misma escena) sí evalúa; la diferencia parece estar en el tipo de canal (features vs keypoints) o en cómo el engine almacena los valores de keypoints de slots presentes. El diagnóstico en vivo fue interrumpido para guardar estado.
+- ECG: sin simulador corriendo, ruta a nature_gain queda en default 0.08. No probado.
+- Audio shaper: motor de audio corriendo (sounddevice PipeWire) pero sin voces activadas. Auriculares solo recibían el beacon file.
+
+Issues encontrados:
+1. **Engine source lease recovery**: si el source harmocap pierde presencia >2500ms, el engine marca gate "absent" y NUNCA se recupera sin re-hello. El rehearsal no lo mostraba porque el fixture era continuo. En vivo, cualquier pausa (crash CUDA, persona fuera de cuadro) rompe el source permanentemente. Fix temporal: lease_ms=300000. Fix real: auto-recovery en el engine o re-hello periódico desde el runtime.
+2. **CUDA crash cu126 en RTX 2060**: torch 2.13.0+cu126 crasheó a los ~4.5 min con "illegal instruction" (probablemente un kernel sm_75 faltante en esa build). Requiere instalar torch cu124 (matching driver 550) o CPU para sesiones largas.
+3. **Path.resolve() en venv**: runner.py dereferenciaba el symlink del venv → subprocesos perdían site-packages. Fixeado (no usar resolve en REHEARSAL_PYTHON).
+4. **LiveOSCTransport + mappingproxy**: ya resuelto en T4.5 repair (dict explícito en vez de asdict()).
+
+Próximos pasos para el /new:
+- Debug gear: ¿por qué las rutas shaper no emiten cuando crowd sí? Hipótesis: _channels_for_present_slot vs feature channels vs state del keypoint. Reproducir en test con fixture real.
+- Grabar sesión de HarMoCAP + audio SC para evidencia reproducible.
+- Probar con cámara integrada a 720p para mejor encuadre de cuerpo entero.
+- Ajustar escena para usar features (no keypoints) si el bloqueo es específico de keypoints.
+
+## 2026-07-18 - S14 - Diagnóstico shaper: causa raíz encontrada y fixeada
+
+Diagnóstico offline con evidencia de la sesión viva (sin cámara): replay de `/tmp/live-test-session2.jsonl` (grabación real, 52k frames) a través del driver + engine reales con escena event-demo y clock virtual.
+
+Hallazgos:
+
+1. **La cadena shaper funciona con datos vivos.** Con el manifiesto corregido, las 5 voces disparan: N5 (cabeza) 23822 writes, N1 11895, N2 8616, N3 3569, N4 3115. El patrón refleja observabilidad real: nariz 97% OBSERVED, muñecas medias, tobillos mayormente fuera de cuadro a 640x480.
+2. **Causa raíz del fallo en vivo (dos bugs combinados):**
+   a. `weaver_runtime.harmocap_manifest()` declaraba TODAS las features con rango (0,1), pero `verticality` es signada (-1,1) según `schema.FEATURE_RANGES` del productor. Datos vivos producen verticality negativa (el fixture two_persons nunca lo hizo, por eso T4.5 pasó): 3243 frames de la sesión real violaban el rango.
+   b. `HarMoCAPDriver._emit` no atrapaba excepciones del consumidor: el raise de validación del engine mataba el thread del listener UDP. Sin listener, no hay más ingesta NI re-hello posible → gate "absent" permanente. Esto unifica todos los síntomas S13: crowd solo escribió en una ventana de 3 s (+157 a +160 s, antes de morir el thread), y las pruebas posteriores (ruta directa nariz, min_confidence=0, hold_then_reset) corrieron contra un source muerto.
+3. **Fixes aplicados en harmonic-weaver (working tree, sin commit):** bounds verticality (-1,1) en el manifiesto del runtime + `_emit` atrapa excepciones del callback y las cuenta en `stats.callback_errors`. Tests de regresión en `tests/test_harmocap_driver.py` (TestCallbackResilience) y `tests/test_rehearsal_harness.py` (feature ranges). Suite: 61 passed + 4 subtests. Repro offline post-fix: 0 excepciones, 52291 instrument writes.
+4. **Procesos huerfanos de S13 limpiados:** harmocap realtime (pid 897655, seguía grabando a /tmp 2h10m), weaver runtime (901237), shaper (888437). SIGTERM limpio, puertos 8765/8080 libres.
+
+Observaciones para la escena (no bugs): foco saltó entre slots 0-4 por falsos positivos de YOLO en la sala (la escena solo mira slots 0-1); tobillos fuera de cuadro a 640x480 — considerar 720p o encuadre más amplio; aggregators con slots 0/1 solamente pierden al sujeto cuando cae en slot >= 2.
+
+Pendientes sin cambios: lease recovery del engine (source absent no se recupera sin re-hello), torch cu126 en RTX 2060 (instalar cu124 o CPU), ensayo audible del shaper (A2 de la auditoría de Fable — S13 no lo cubrió porque las voces nunca dispararon).
+
+## 2026-07-18 - S14b - Triage auditoría Fable + limpieza de stack
+
+**Stack apagado:** se encontró un SuperCollider del beacon vivo (scsynth 867943 + sclang beacon.scd 868097, era lo que sonaba), más el launcher start-beacon.sh y webui.py. Todo SIGTERM limpio. Verificado: sin procesos beacon/shaper/weaver/harmocap, SuperCollider fuera de pipewire.
+
+**Fixes S14 commiteados:** harmonic-weaver `b5b5221`, pusheado y verificado en ambos remotos (nicoechaniz + AlterMundi).
+
+**Auditoría Fable ejecutada:**
+- A4: beacon-spatial ahora tiene pushurl dual (nicoechaniz + AlterMundi). Espejo `AlterMundi/beacon-spatial` creado (público). Verificado por ls-remote: main `de2768c` y sensors `6c57986` presentes en AMBOS remotos — el riesgo de pérdida de datos queda cerrado.
+- A5: digital-beacon limpio. PNGs de análisis (espectrogramas/waveforms de frogs, regenerables desde el WAV canónico en beacon-spatial) borrados; symlink roto `data/sources/2_Sesion_Minerval_extra.wav` (gitignored, apuntaba a ruta voice-analysis inexistente) eliminado. Working tree limpio; no hubo nada trackeado que commitear.
+- A1, A2, A3, B6, B7, B9, C10 + lease recovery: cards F5-* creadas en triage en board `beacon-ecosystem-orch` (t_c0ede1e0, t_db173939, t_4beb6d46, t_b92791c3, t_e299befb, t_597f9f26, t_5f850e95, t_a86ca0f8).
+
+**torch/CUDA:** downgrade a torch 2.6.0+cu124 en `.venv` (ultralytics 8.4.100 solo requiere torch>=1.8). Resultado de soaks GPU (YOLO26m-pose, track, imágenes random): 1 crash intermitente (illegal instruction, <6 min) de 3 corridas — 4 min con CUDA_LAUNCH_BLOCKING=1 PASS (4368 inf), 7 min async PASS (4466 inf). El crash NO es determinista: no es un build sin sm_75 (cu124 lo incluye y la mayoría de corridas pasa). Hipótesis revisada: driver 550.163.01 viejo o hardware marginal; no se descarta rareza bajo carga. Recomendación: correr el ensayo en vivo y observar; fallback CPU disponible; update de driver como mantenimiento separado.
+
+**Pendiente para Nico:** re-ensayo en vivo (card F5-A2) — con los fixes, las voces del shaper deberían disparar; además cubre el ensayo audible (Fable A2).
+
+
+## 2026-07-18 - S15 - start-live-stack.sh: el stack en vivo en un comando
+
+Tras el apagon (sin perdida: todo estaba commiteado), se construyo el launcher que faltaba para el re-ensayo en vivo (F5-A2). harmonic-weaver `0f735db`, pusheado a nicoechaniz + AlterMundi.
+
+- `scripts/start-live-stack.sh`: levanta beacon-spatial -> shaper -> weaver runtime -> push de escena -> HarMoCAP realtime (+ ECG sim opcional) con gates de readiness reales entre etapas (OSC hello contra el contrato vivo, HTTP API, TCP WS), bootstrap de venvs (uv sync para weaver, venv+pip -e para shaper), preflight de puertos, teardown en orden inverso ante Ctrl-C o muerte de cualquier componente, pidfile + `--stop <run-id|latest>` para corridas detached. Opciones documentadas en el header y `--help`.
+- `rehearsal/push_scene.py`: CLI standalone para upsert/switch de escenas por Stage WS (reusa el StageClient del runner).
+- `rehearsal/weaver_runtime.py`: nuevo arg `--lease-ms` (default 2500) cableado a los tres manifests de fuentes. El default en vivo es 300000 para que un dropout transitorio no trabe el gate en absent permanente (la recuperacion de lease del engine sigue abierta, card F5-ENG).
+
+Smoke test E2E real (2 corridas): (1) GPU — stack completo arriba, escena event-demo activa, las 5 rutas del shaper dispararon con datos de camara reales (fix S14 confirmado en vivo), pero el crash intermitente CUDA (illegal instruction, RTX 2060 + driver 550) mato harmocap a los ~60s y el script bajo todo limpiamente, sin huerfanos. (2) `--harmocap-device cpu` (nueva opcion, CUDA_VISIBLE_DEVICES="" solo para ese proceso) — corrida sostenida 90s+, 26 writes a instrumentos en 78s, 520 frames grabados, cero crashes, `--stop` verificado con teardown completo.
+
+La opcion `--harmocap-device cpu` queda como fallback operativo mientras el crash CUDA intermitente no se resuelva (hipotesis: driver 550.163.01 viejo; update de driver pendiente como mantenimiento separado).
+
+Pendiente sin cambios: re-ensayo en vivo con Nico (F5-A2, ahora es un solo comando), ensayo audible del shaper, lease recovery del engine.

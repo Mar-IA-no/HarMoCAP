@@ -22,7 +22,8 @@ Los reportes crudos de subagentes se conservan por separado. Los papers pesados 
 
 | Tema | Fecha inicio | Estado | Resumen |
 |---|---|---|---|
-| (vacio) | | | |
+| [rearquitectura-ecosistema-beacon](rearquitectura-ecosistema-beacon/README.md) | 2026-07-18 | en_curso | Relevamiento de 6 proyectos (HarMoCAP como referencia + NaturalHarmony, beacon-spatial, digital-beacon, tines, cymatic-control) y propuesta de arquitectura objetivo: dashboard de patcheo fuentes→instrumentos. GO del usuario 2026-07-18, en ejecucion orquestada. |
+| [beacon-ecosystem-orchestration](beacon-ecosystem-orchestration/README.md) | 2026-07-18 | en_curso | Ejecucion orquestada del plan de re-arquitectura: CompAII despacha via ia-bridge con auditoria por build, Codex Sol en ruta critica. Kanban `beacon-ecosystem-orch` como ledger. GOALS.md es el documento autoritativo. |
 
 ## Estados validos
 
