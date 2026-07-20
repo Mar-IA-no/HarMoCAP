@@ -24,6 +24,15 @@ El modo masa (contrato 1.2) deriva sus agregados de las bboxes que entrega YOLO2
 
 La difusión aplicada al conteo es incompatible con tiempo real. La inferencia por mosaicos exige un número de pasadas que no cabe en el presupuesto y carece de precedente en conteo de multitud. Los métodos de conteo sin supervisión basados en modelos de lenguaje visual producen errores de cuatro veces el valor real. Y dos de los repositorios más citados del campo tienen problemas de licencia que los excluyen de un proyecto con vocación pública: uno restringe el uso a investigación académica pese a aparentar licencia permisiva, y otro no publica licencia alguna.
 
+## Verificación de procedencia
+
+El agente que produjo el reporte crudo admitió, en un mensaje posterior a la entrega, haber narrado un avance antes de tenerlo. Esa admisión obliga a tratar el informe como no confiable hasta comprobarlo, de modo que las afirmaciones que sostienen la recomendación se verificaron contra la fuente primaria:
+
+- **ZIP**: repositorio existente bajo licencia MIT, cinco variantes con los conteos de parámetros reportados (0,81 M a 105,6 M) y pesos publicados para los cuatro datasets. El paper existe con el título, los autores y la fecha citados, y su método es efectivamente una verosimilitud de Poisson inflada en cero sobre conteos por bloque — de donde salen tanto el mapa de tasa como el mapa de ceros estructurales que el diseño aprovecha.
+- **HAJJv2-CrowdCount**: el benchmark existe con el identificador citado, compara los tres paradigmas indicados y reporta los valores exactos que el informe atribuye, incluida la inversión del ranking en la banda densa.
+
+Ambas verificaciones coinciden hasta el decimal con lo reportado. Los números de MAE por dataset de la tabla comparativa no se verificaron uno por uno: quien los use como criterio de decisión debería confirmarlos contra el paper correspondiente.
+
 ## Estado
 
 Investigación **cerrada**. La decisión de implementar depende de una verificación previa sobre material propio: sin medir el error en nuestro punto de operación, no hay forma de distinguir una señal de densidad de ruido caro.
