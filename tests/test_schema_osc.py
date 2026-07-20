@@ -247,7 +247,7 @@ def test_crowd_bundle_roundtrip_and_size():
              "centroid_x": 0.9, "centroid_y": 0.48, "flow_x": -0.2,
              "flow_y": 0.05, "dispersion": 0.61,
              "crowd_tempo_bpm": 128.5, "crowd_beat_phase": 0.25,
-             "crowd_tempo_conf": 0.72}
+             "crowd_tempo_conf": 0.72, "mass_present": 0.4, "mass_active": 0.18}
     data = osc_codec.build_crowd_bundle(
         stream_id="aabbccdd00112233", captured_frame_id=100, bundle_seq=7,
         crowd=crowd)
@@ -260,4 +260,6 @@ def test_crowd_bundle_roundtrip_and_size():
     assert args[10] == pytest.approx(0.61, abs=1e-4)
     assert args[11] == pytest.approx(128.5, abs=1e-2)   # 1.3: tempo colectivo
     assert args[13] == pytest.approx(0.72, abs=1e-4)
+    assert args[14] == pytest.approx(0.4, abs=1e-4)     # 1.4: masa presente
+    assert args[15] == pytest.approx(0.18, abs=1e-4)
     assert len(args) == 3 + len(osc_codec.CROWD_FIELDS)

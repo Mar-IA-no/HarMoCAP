@@ -168,15 +168,20 @@ class ContractReceiver:
             self.stats["gated"] += 1   # crowd TAMBIÉN gatea por handshake
             return
         self.stats["bundles"] += 1
-        self.on_crowd({"crowd_count": a[3], "crowd_qom": a[4], "density": a[5],
-                       "centroid_x": a[6], "centroid_y": a[7],
-                       "flow_x": a[8], "flow_y": a[9], "dispersion": a[10]})
+        # el orden de los campos lo fija osc_codec.CROWD_FIELDS (contrato 1.4)
+        self.on_crowd(dict(zip(osc_codec.CROWD_FIELDS, a[3:])))
 
     def on_crowd(self, crowd: dict) -> None:
-        """REEMPLAZAR: agregados de multitud (la masa como UN instrumento)."""
+        """REEMPLAZAR: agregados de multitud (la masa como UN instrumento).
+
+        1.3: crowd_tempo_bpm/beat_phase/conf (pulso de la masa; 0 = desconocido).
+        1.4: mass_present/mass_active (masa por densidad, SOLO en modo masa, 0 en
+        grupo): present = toda la gente en cuadro; active = cuánta se mueve.
+        Escala relativa a la sesión, no absoluta."""
         if not self.quiet:
             print(f"[crowd] n={crowd['crowd_count']} qom={crowd['crowd_qom']:.2f} "
-                  f"densidad={crowd['density']:.2f} disp={crowd['dispersion']:.2f}")
+                  f"densidad={crowd['density']:.2f} disp={crowd['dispersion']:.2f} "
+                  f"masa_pres={crowd['mass_present']:.2f} masa_activa={crowd['mass_active']:.2f}")
 
     # ------------------------------------------------------------- tu mapeo
     def on_movement(self, slot: int, p: dict, meta: list) -> None:

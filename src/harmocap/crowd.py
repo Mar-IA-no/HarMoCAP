@@ -56,7 +56,8 @@ class CrowdAggregator:
                     "centroid_x": 0.0, "centroid_y": 0.0,
                     "flow_x": 0.0, "flow_y": 0.0, "dispersion": 0.0,
                     "crowd_tempo_bpm": 0.0, "crowd_beat_phase": 0.0,
-                    "crowd_tempo_conf": 0.0}
+                    "crowd_tempo_conf": 0.0,
+                    "mass_present": 0.0, "mass_active": 0.0}
 
         # centros en coords ISOTRÓPICAS (x escala por aspect; h4 M2 — qom/flow/
         # dispersion se median en unidades anisotrópicas)
@@ -115,4 +116,7 @@ class CrowdAggregator:
                 "dispersion": round(disp, 4),
                 "crowd_tempo_bpm": round(c_bpm, 2),
                 "crowd_beat_phase": round(c_phase, 4),
-                "crowd_tempo_conf": round(c_conf, 4)}
+                "crowd_tempo_conf": round(c_conf, 4),
+                # masa por densidad: el pipeline las sobreescribe en modo masa;
+                # 0 acá para que el bundle sea completo sin backend de densidad
+                "mass_present": 0.0, "mass_active": 0.0}

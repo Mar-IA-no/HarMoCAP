@@ -1,10 +1,38 @@
-# INTERFACE_SPEC — Contrato HarMoCAP → Nico (v1.3)
+# INTERFACE_SPEC — Contrato HarMoCAP → Nico (v1.4)
 
+> **Cambio 1.3→1.4: MASA POR DENSIDAD.** El mensaje `/crowd` suma dos campos,
+> `mass_present` y `mass_active` (13 campos en total). El bundle de persona no
+> cambia. `contract_id` nuevo.
+>
 > **Cambio 1.2→1.3: TEMPO.** Tres features nuevas por persona (`tempo_bpm`,
 > `beat_phase`, `tempo_conf`) y sus equivalentes de multitud (`crowd_tempo_*`).
 > El vector de features pasa de 21 a **24**: los blobs cambian de tamaño
 > (`>24f` / `>24B`), así que un receptor 1.2 no puede leer un stream 1.3.
 > `contract_id` nuevo — actualizá el kit completo.
+
+## Masa por densidad (1.4, solo modo masa)
+
+Donde la multitud se vuelve densa, la detección deja de encontrar gente (mide 4
+personas donde hay 70) y un modelo de densidad la ve. En **modo masa** el
+mensaje `/crowd` agrega dos señales de esa rama:
+
+| Campo | Rango | Qué es |
+|---|---|---|
+| `mass_present` | 0..1 | **toda** la gente en cuadro, incluida la que la detección no ve |
+| `mass_active` | 0..1 | cuánta de esa masa se mueve (present ponderada por movimiento) |
+
+Dos advertencias que definen cómo usarlas:
+
+- **Escala relativa, no absoluta.** No son un conteo: el modelo no está ajustado
+  a esta cámara, así que el número exacto no es confiable. Están normalizadas
+  contra el percentil rodante de la propia sesión: suben cuando entra o se agita
+  gente, bajan cuando se vacía. Para modular importa esa dinámica, no el conteo.
+- **Solo en modo masa.** En modo grupo ambas viajan en 0.0. `crowd_count` (la
+  detección cruda) sigue estando en los dos modos.
+
+Idea de mapeo (A+C): `mass_present` lleva la densidad armónica de fondo (cuánta
+presencia hay), `mass_active` lleva la intensidad (cuánto se agita). Un recital
+lleno pero quieto da present alto / active bajo; un pogo, ambos altos.
 >
 > **Cambio 1.1→1.2:** nuevo mensaje `/harmocap/v1/crowd` con agregados de
 > MULTITUD (la masa como un solo instrumento) + el productor ahora corre en dos

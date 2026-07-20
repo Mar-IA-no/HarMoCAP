@@ -120,6 +120,31 @@ class HarmocapPipeline:
         from harmocap.crowd import CrowdAggregator
         self.crowd = CrowdAggregator()
         self.last_crowd: dict = {}
+
+        # H6 F2: rama de densidad para masa (A+C). SOLO en modo masa — en grupo
+        # importa la identidad de ≤8, no la masa, y ahorramos el costo. Los
+        # campos mass_* viajan en 0 cuando no hay backend (documentado en spec).
+        self.density = None
+        self.density_crowd = None
+        dcfg = mode_cfg.get("overrides", {}).get("density", {})
+        if dcfg.get("enabled"):
+            onnx_path = self.repo / dcfg["onnx"]
+            if onnx_path.is_file():
+                from harmocap.density import DensityBackend
+                from harmocap.density_crowd import DensityCrowdAggregator
+                self.density = DensityBackend(onnx_path,
+                                              min_edge=dcfg.get("min_edge", 448))
+                self.density_crowd = DensityCrowdAggregator()
+                # la masa cambia lento: inferir cada cuadro pone el modelo en el
+                # camino crítico (medido: +45 ms). Con stride corre a ~6 Hz y se
+                # reusa el último valor — la señal es ambiente, no responsiva.
+                self._density_stride = dcfg.get("stride", 5)
+                self._density_i = 0
+                self._last_mass = {"mass_present": 0.0, "mass_active": 0.0}
+            else:
+                import warnings
+                warnings.warn(f"densidad activada pero falta el ONNX: {onnx_path}; "
+                              "mass_* viajarán en 0")
         self.calib = CalibrationManager(self.cfg_feat["calibration"]["fallback"],
                                         period_ms=self.cfg_feat["calibration"]["period_ms"])
         # instancias POR SLOT (contrato 1.1): se crean/resetean con slot_reset
@@ -186,6 +211,21 @@ class HarmocapPipeline:
         # H4b: agregados de multitud sobre detecciones CRUDAS (recall)
         self.last_crowd = self.crowd.update(raw_boxes, captured_at_us,
                                             aspect=w / h if h else 16 / 9)
+        # H6 F2: masa por densidad (solo modo masa). Complementa la detección:
+        # ve a toda la gente en cuadro, incluida la que YOLO no encuentra.
+        if self.density is not None:
+            if self._density_i % self._density_stride == 0:
+                import cv2
+                rgb = cv2.cvtColor(frame_img, cv2.COLOR_BGR2RGB)
+                dmap = self.density.infer(rgb)
+                dc = self.density_crowd.update(dmap, rgb, captured_at_us)
+                self._last_mass = {"mass_present": dc["mass_present"],
+                                   "mass_active": dc["mass_active"]}
+            self._density_i += 1
+            self.last_crowd.update(self._last_mass)
+        else:
+            self.last_crowd["mass_present"] = 0.0
+            self.last_crowd["mass_active"] = 0.0
 
         persons: list[PersonState] = []
         persons_wire: list[dict] = []

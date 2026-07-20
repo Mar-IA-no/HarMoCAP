@@ -17,7 +17,7 @@ import secrets
 from dataclasses import dataclass, field
 from enum import IntEnum
 
-SCHEMA_VERSION = "1.3.0"   # 1.3: + tempo/fase (K=24, crowd=11); 1.2: multitud; 1.1: multi-persona
+SCHEMA_VERSION = "1.4.0"   # 1.4: + masa por densidad (crowd=13); 1.3: tempo; 1.2: multitud
 FEATURE_SET_VERSION = "1.1.0"   # 1.1: + tempo_bpm, beat_phase, tempo_conf
 
 # Orden canónico de los agregados de multitud (contrato 1.2). crowd_count es un
@@ -27,6 +27,10 @@ CROWD_FIELDS: tuple[str, ...] = (
     "flow_x", "flow_y", "dispersion",
     # 1.3: tempo colectivo (mismo estimador que el de persona, sobre crowd_qom)
     "crowd_tempo_bpm", "crowd_beat_phase", "crowd_tempo_conf",
+    # 1.4: masa por mapa de densidad (SOLO modo masa; 0 en modo grupo). Escala
+    # RELATIVA a la sesión (percentil rodante), no absoluta. present = toda la
+    # gente en cuadro; active = cuánta se mueve (present ponderado por movimiento)
+    "mass_present", "mass_active",
 )
 LAYOUT_VERSION = "1"
 PRODUCER_VERSION = "0.1.0"

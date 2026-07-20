@@ -8,3 +8,9 @@ overrides:
     name: "bytetrack.yaml" # barato; la identidad individual no importa en masa
   identity:
     reacquisition_enabled: false
+  # H6 F2: rama de densidad para masa (A+C). Solo en modo masa; complementa la
+  # detección donde la gente es chica y numerosa (YOLO ve 4 donde hay ~70).
+  density:
+    enabled: true
+    onnx: "outputs/density/zip_qnrf_n.onnx"   # QNRF nano (mejor transferencia cross-dataset)
+    min_edge: 448                              # no bajar: la resolución degrada el modelo

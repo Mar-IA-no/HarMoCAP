@@ -39,6 +39,7 @@ CROWD_FIELDS: tuple[str, ...] = (
     "crowd_count", "crowd_qom", "density", "centroid_x", "centroid_y",
     "flow_x", "flow_y", "dispersion",
     "crowd_tempo_bpm", "crowd_beat_phase", "crowd_tempo_conf",
+    "mass_present", "mass_active",   # 1.4: masa por densidad (0 en modo grupo)
 )
 
 _IMMEDIATELY = b"\x00\x00\x00\x00\x00\x00\x00\x01"  # timetag OSC "immediately"

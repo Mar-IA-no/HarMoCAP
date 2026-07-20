@@ -380,3 +380,15 @@ Evidencia visual (`Biblioteca/test/densidad_render/`): en el pogo de Marolio la 
 Verificacion: 86/86 tests (8 nuevos: normalizacion por percentil rodante, provisional antes de llenar ventana, masa activa separa movimiento de presencia, centroide sigue la densidad, escena vacia, reset; backend con skip si falta el ONNX).
 
 Pendiente F2-F4 (decision de arranque del usuario): integrar en `crowd.py`/pipeline con regimen doble deteccion+densidad e histeresis; flujo direccional (NVOFA, hoy solo magnitud de movimiento); contrato 1.4 con los campos de masa; kit y spec. Nota abierta: la escala absoluta sigue sin anclar (requiere anotacion manual) y el provider CUDA de onnxruntime pide cuDNN 9 para latencia GPU fuera del pipeline.
+
+## 2026-07-20 - S9 - Hito 6 F2: masa por densidad integrada al pipeline (contrato 1.4)
+
+Integrada la rama de densidad al modo masa. Contrato **1.4**: el mensaje `/crowd` suma dos campos, `mass_present` y `mass_active` (13 campos; `contract_id` nuevo `22f66db5...`). El bundle de persona no cambia.
+
+- **`mass_present`** (0..1): toda la gente en cuadro segun el mapa de densidad — ve a quienes la deteccion no encuentra. **`mass_active`** (0..1): esa masa ponderada por movimiento local (decision A+C del usuario: presencia vs agitacion). Ambas RELATIVAS a la sesion (percentil rodante p95), no absolutas: el modelo no esta ajustado al dominio, la escala exacta no es confiable pero la dinamica si.
+- **Solo en modo masa** (`configs/modes/crowd.yaml` bloque `density`). En grupo importa la identidad de ≤8, no la masa: la densidad no se carga y `mass_*` viajan en 0. `crowd_count` (deteccion cruda) sigue en ambos modos.
+- **Stride de inferencia**: la densidad cada cuadro ponia el modelo en el camino critico (+45 ms, medido). Como la masa es una señal ambiente y no responsiva, corre cada 5 cuadros (~6 Hz) y se reusa. Latencia de modo masa: **55 → 9,25 ms p50** (picos de p95/p99 en los cuadros donde corre; decoplarla a un hilo aparte es F3).
+
+E2E real por el wire (pogo Marolio, modo masa, receptor del kit 1.4 aislado): 1655 bundles, 0 perdidos / 0 gateados, `mass_present`/`mass_active` decodificados correctamente. 86/86 tests. Kit y spec 1.4 regenerados.
+
+Pendiente F3-F4: decoplar la densidad a un hilo (latencia sin picos); flujo direccional de la masa (NVOFA — hoy solo magnitud de movimiento); regimen doble deteccion+densidad con crossfade si se quiere un unico "conteo" fusionado (por ahora se emiten ambas señales por separado y Nico las cruza). La escala absoluta sigue sin anclar (requiere anotacion manual).

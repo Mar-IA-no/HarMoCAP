@@ -123,7 +123,9 @@
         "dispersion",
         "crowd_tempo_bpm",
         "crowd_beat_phase",
-        "crowd_tempo_conf"
+        "crowd_tempo_conf",
+        "mass_present",
+        "mass_active"
       ],
       "properties": {
         "crowd_count": {
@@ -158,6 +160,12 @@
           "type": "number"
         },
         "crowd_tempo_conf": {
+          "type": "number"
+        },
+        "mass_present": {
+          "type": "number"
+        },
+        "mass_active": {
           "type": "number"
         }
       },
