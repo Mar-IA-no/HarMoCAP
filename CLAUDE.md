@@ -48,9 +48,9 @@ No hay ownership permanente por agente. La tarea o el usuario define el rol acti
 
 ## Flujo Git y espejos
 
-El repositorio canonico es `Mar-IA-no/HarMoCAP`, remoto local `origin`. `AlterMundi/HarMoCAP` (remoto local `altermundi`) es el repositorio compartido con la linea de Nico (ecosistema harmonic-weaver/shaper/beacon).
+El repositorio principal es `nicoechaniz/HarMoCAP`, remoto local `origin`. El espejo de la organizacion es `AlterMundi/HarMoCAP`, remoto local `altermundi`.
 
-`origin` tiene dos `pushurl` (Mar-IA-no primero, AlterMundi despues): el flujo normal `git push` publica ambos. Tras cada push se verifica que ambos remotos queden en el mismo commit; si el push a AlterMundi rebota porque la linea de Nico avanzo primero, se mergea `altermundi/main` antes de reintentar (verificado 2026-07-19 que los trabajos no se pisan; ante conflicto en artefactos de `reports/`, preservar ambas versiones como archivos separados).
+`origin` tiene dos `pushurl` (nicoechaniz primero, AlterMundi despues): el flujo normal `git push` publica ambos. Tras cada push se verifica que ambos remotos queden en el mismo commit; si el push a AlterMundi rebota porque la linea de Mariano avanzo primero, se mergea `altermundi/main` antes de reintentar (verificado 2026-07-19 que los trabajos no se pisan; ante conflicto en artefactos de `reports/`, preservar ambas versiones como archivos separados).
 
 ## Fuentes conceptuales y tecnicas
 
