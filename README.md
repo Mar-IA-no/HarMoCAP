@@ -38,8 +38,17 @@ No es todavia un producto clinico, un sistema de interpretacion psicologica del 
 
 ### Quickstart
 
+**Interfaz web (plug-and-play, cualquier máquina):**
+```bash
+pip install -r requirements.txt      # NO requirements.lock (fijado a la placa del servidor)
+python scripts/webapp.py             # baja los modelos si faltan y abre la interfaz local
+```
+Ver `docs/MANUAL_DE_USO.md` para qué se puede medir y cómo usarlo.
+
+**Desarrollo / línea de comandos:**
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"   # GPU: torch cu126
+.venv/bin/python scripts/fetch_models.py     # baja los modelos (pose + densidad)
 .venv/bin/python -m pytest tests/            # suite completa
 .venv/bin/python scripts/run_realtime.py --source 0          # camara en vivo → OSC
 .venv/bin/python scripts/build_nico_kit.py   # regenerar el kit para Nico
