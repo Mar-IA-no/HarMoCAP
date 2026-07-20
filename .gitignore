@@ -61,3 +61,10 @@ outputs/sessions/
 
 # Barridos y tests locales de inferencia (videos regenerables)
 Biblioteca/test/            # todo el material de prueba vive acá (videos, renders, salidas)
+
+# artefactos de densidad (build, regenerables con scripts/export_density.py)
+outputs/density/
+outputs/zip_eval/
+Biblioteca/test/densidad_render/
+*.onnx
+*.onnx.data

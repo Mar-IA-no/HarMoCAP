@@ -364,3 +364,19 @@ Cinco decisiones salieron de medir, no de diseñar:
 Consecuencia de diseño para el hito 6: la rama de densidad mide **toda la gente en cuadro**, incluido el publico que no baila. Para Beacon eso puede ser exactamente lo deseado (la masa entera) o requerir acotacion espacial a la pista. Decision del usuario. La escala absoluta sigue sin verificar (haria falta anotacion manual); la localizacion espacial, que es la evidencia mas fuerte disponible sin anotar, es visiblemente correcta.
 
 Verificacion: 78/78 tests (21 nuevos de tempo: recuperacion en todo el rango declarado, semantica de tasa de eventos, sin octava baja, control de ruido con cinco semillas, historia insuficiente, rampa de fase, jitter de captura, integracion con estados). Kit 1.3 regenerado.
+
+## 2026-07-20 - S8 - Hito 6 F1: backend de masa por densidad (A+C) sobre ONNX
+
+Decision del usuario: masa = **A+C** (conteo total de gente en cuadro + masa ponderada por movimiento). Modo grupo queda en **maxima identidad** (no se aflojan gates; las fusiones que el usuario observo en modo c solo se pueden atacar con ground-truth anotado, que queda como tarea aparte). Material de prueba consolidado bajo `Biblioteca/test/`.
+
+Entregado (F1, sin cambio de contrato todavia):
+- **Export a ONNX** (`scripts/export_density.py`): ZIP nano QNRF y NWPU exportados a ONNX autocontenido (10 y 13,7 MB), verificado contra el torch original (max_diff 7e-5). Desacopla produccion del repo de ZIP: el backend corre con onnxruntime+numpy, sin torch ni la rama CLIP. Artefacto de build gitignoreado como el engine.
+- **`src/harmocap/density.py`**: `DensityBackend` — preprocesa (min_edge 448, normalizacion ImageNet, padding a multiplo de 32) e infiere el mapa de densidad. CUDA en el contexto del pipeline (ultralytics configura las libs); 13,4 ms en CPU como fallback, que ademas deja la GPU libre para la pose (no compiten).
+- **`src/harmocap/density_crowd.py`**: `DensityCrowdAggregator` — masa PRESENTE (suma del mapa), masa ACTIVA (densidad x movimiento local por diferencia de cuadros, causal), centroide y dispersion como momentos del campo. Ambas masas normalizadas contra **percentil rodante p95 de la sesion** (20 s): la escala absoluta no es confiable —el modelo no esta ajustado a nuestro dominio— pero la dinamica relativa si, y es lo que importa para modular.
+- **`scripts/render_density.py`**: render de evidencia con mapa en falso color + barras pres/activ + conteo comparado.
+
+Evidencia visual (`Biblioteca/test/densidad_render/`): en el pogo de Marolio la densidad cuenta **34 personas donde YOLO ve 1**, con los picos del mapa sobre cabezas individuales incluso al fondo. Confirma el diagnostico del hito: la deteccion es ciega a la multitud densa y la densidad la recupera.
+
+Verificacion: 86/86 tests (8 nuevos: normalizacion por percentil rodante, provisional antes de llenar ventana, masa activa separa movimiento de presencia, centroide sigue la densidad, escena vacia, reset; backend con skip si falta el ONNX).
+
+Pendiente F2-F4 (decision de arranque del usuario): integrar en `crowd.py`/pipeline con regimen doble deteccion+densidad e histeresis; flujo direccional (NVOFA, hoy solo magnitud de movimiento); contrato 1.4 con los campos de masa; kit y spec. Nota abierta: la escala absoluta sigue sin anclar (requiere anotacion manual) y el provider CUDA de onnxruntime pide cuDNN 9 para latencia GPU fuera del pipeline.
