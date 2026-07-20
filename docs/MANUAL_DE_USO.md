@@ -119,6 +119,18 @@ Eso abre el navegador en una página local (nada sale del equipo). Ahí, en cuat
 
 Procesa con el hardware que tenga la máquina hasta donde alcance: en una con placa de video va rápido, en una sin placa tarda más, pero siempre corre. La página lo dice de entrada.
 
+### Correr en una máquina sin placa NVIDIA (por ejemplo, una Mac)
+
+El sistema corre en cualquier máquina, pero hay que tener en cuenta que **dos archivos pesados no viajan con el repositorio** (están excluidos a propósito): el modelo entrenado y el modelo de densidad. Un clon fresco necesita:
+
+1. **El modelo entrenado** (imprescindible). En una Mac o un equipo sin placa NVIDIA, el sistema usa el modelo portable `harmocap-m-pose-ft2.pt` —la versión rápida compilada solo sirve en placas NVIDIA—. Ese archivo hay que copiarlo a la raíz del clon; sin él, no hay modelo que cargar.
+
+2. **El modelo de densidad** (opcional, para las señales de masa). Los archivos `outputs/density/*.onnx` habilitan `mass_present` y `mass_active` en el modo masa. Si no están, el modo masa igual funciona, solo que esas dos señales llegan en cero.
+
+3. **Las dependencias**: instalar desde `requirements.txt`, **no** desde `requirements.lock` —ese está fijado a las versiones de la placa NVIDIA del servidor y no sirve en otra máquina—. En una Mac, la instalación estándar de PyTorch ya trae el soporte de Apple Silicon.
+
+La cámara web sí funciona cuando el sistema corre local (no así cuando se accede a un servidor remoto, que buscaría la cámara del servidor).
+
 ## 7. Cómo poner cada cosa a funcionar por línea de comandos (MVP de cada opción)
 
 Todos los comandos se corren desde la raíz del proyecto, con el entorno del proyecto activo. (Todo esto también está detrás de la interfaz web del punto anterior; esta sección es para quien prefiere la terminal o automatizar.)
