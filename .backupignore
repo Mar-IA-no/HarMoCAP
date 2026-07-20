@@ -1,0 +1,29 @@
+# .backupignore — exclusiones de backup específicas de HarMoCAP.
+# Lo lee el rsync de /mnt/m2-1TB/backup_m2_to_drive.sh (dir-merge, por directorio).
+# Patrones con "/" al inicio se anclan a esta raíz; sin "/" matchean a cualquier profundidad.
+# OJO: esto NO es .gitignore — acá NO poner .env/keys/credentials (el backup debe guardarlos).
+
+# Derivados pesados y regenerables (re-entrenables / re-descargables):
+/runs/
+/data/
+/outputs/
+
+# Salidas de video de inferencia (regenerables desde el pipeline):
+*.mp4
+*.mov
+*.mkv
+*.webm
+
+# Renders y overlays derivados del material de prueba (regenerables desde los
+# scripts; los videos fuente del corpus se conservan):
+/Biblioteca/test/densidad_overlay/
+/Biblioteca/test/densidad_render/
+/Biblioteca/test/videos_people_dancing_slots/
+/Biblioteca/test/videos_people_dancing_modos/
+/Biblioteca/test/two_slots_render/
+/Biblioteca/test/videos_people_dancing_inferido/
+
+# Artefactos de densidad (clon de ZIP + ONNX exportados; regenerables):
+# (ya cubierto por /outputs/, se explicita por claridad)
+/outputs/zip_eval/
+/outputs/density/
