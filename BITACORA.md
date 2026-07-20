@@ -303,3 +303,43 @@ Addendum S6b — descomposicion del overhead del modo grupo (video 1, capa 3 act
 | sin ReID, sin GMC | 226 | 17.7 | **135.0** |
 
 Lectura: la REASOCIACION DE SLOTS (capa 3) hace el trabajo pesado — sin ReID ni GMC igual da 17.7 sw/min (vs 55.7 del baseline ByteTrack). ReID+GMC compran la mejora marginal 17.7→14.3 a costo ~4x de fps. Implicancia para Mac/mps: `with_reid: False` + `gmc_method: none` es un modo grupo viable (~4x mas barato, identidad casi igual). El bench es cámara en mano; con cámara fija el aporte de GMC deberia caer. Config default se mantiene (máxima identidad en 3090, 33 fps = tiempo real); el knob queda documentado para decision del usuario.
+
+## 2026-07-19 - S16 - Shaper silencioso: causa raíz resuelta (JACK vs ALSA plugin)
+
+El shaper nunca sonó en ningún ensayo en vivo (S13, S14, corridas posteriores). Diagnóstico por capas con evidencia:
+
+1. Voces activas con freq/gain correctos, master 0.8, stream linkeado a la R24, sin errores en log. Silencio.
+2. Tono pw-cat directo al sink R24: AUDIBLE. Cadena PipeWire->R24->auris OK.
+3. Recorder tap dentro del callback: rms=0.32, cadencia real-time — el DSP genera señal. Silencio igual.
+4. Historial: sesión 20260718_113431 quedó sin resolver en el mismo punto; pw-top mostraba el stream python idle (rate ---).
+5. aplay -D default (mismo PCM ALSA->PipeWire que usa PortAudio): AUDIBLE. aplay -M (mmap): también reproduce sin error.
+6. Hipótesis de Nico (correcta): "usabas jack sobre pipewire". PortAudio del venv expone host API JACK bajo pw-jack. Prueba con engine directo: device 'R24 Analog Stereo' + sr 48000 (JACK impone el rate del server, -9997 con otro): SONO.
+
+Fixes commiteados: harmonic-shaper (audio_engine adopta el sample rate del server JACK al detectar hostapi JACK; 64/64 tests) + harmonic-weaver start-live-stack.sh (shaper bajo pw-jack con --device "R24 Analog Stereo", opcion --shaper-device y env SHAPER_DEVICE). Verificación E2E en vivo: nota MIDI -> voz 4 activa 161.6 Hz -> AUDIBLE por la R24. Confirmado por Nico.
+
+Gap de diseño descubierto en el camino (pendiente): las rutas del weaver solo escriben /digital/harmonic/{n}/gain — nunca activan la voz ni setean frecuencia, y el motor solo renderiza voces activas. Para que el cuerpo suene por el weaver hace falta voice_on en el surface nativo o auto-activación en el handler de gain (freq = n*f1). También: nota MIDI enviada por Midi Through quedo sonando sin parar tras note_off (investigar release path del NativeMidiNoteSource; panic por API la libero).
+
+Quirks R24 documentados en MEMORY.md: tras boot unclean, wireplumber no perfila la R24 (fix: restart wireplumber + re-link manual de SuperCollider:out_*).
+
+## 2026-07-19 - S17 - Playable harmonic-series keyboard banks
+
+The native keyboard mapping was corrected from the legacy NaturalHarmony hybrid mapper, which selected a 12-key harmonic prototype and then octave-adapted it toward 12-TET. That behavior was incompatible with a directly playable harmonic series.
+
+Physical calibration captured from the keyboard MIDI port:
+
+| Transpose position | Lowest physical key | Next key |
+|---|---:|---:|
+| Minimum | MIDI 24 | MIDI 25 |
+| Maximum | MIDI 72 | MIDI 73 |
+
+`harmonic-shaper` now defaults to configured `sequential_banks`: MIDI `24..55` maps momentarily to `n=1..32`, and MIDI `72..103` maps to the same partials as toggle/sustain. Every selected partial is exactly `f1*n`; no 12-TET or octave adaptation remains in this mode. Notes outside the configured banks are ignored to prevent intermediate transpose positions from silently reverting to a tempered behavior. The bank starts and size are generic config/CLI values, not a device-name dependency; the former mapper remains available only as explicit `legacy_hybrid` compatibility mode.
+
+Verification: 70 shaper tests pass, including new mapping/lifecycle/safety coverage. Live MIDI E2E through the running JACK/R24 shaper passed: MIDI 24 started `n=1 @ 40.4 Hz` and released on note-off; MIDI 72 started `n=1 @ 40.4 Hz`, survived its note-off, and released on the second press. Reference: `harmonic-shaper/docs/NATIVE_MIDI_HARMONIC_BANKS.md`.
+
+## 2026-07-19 - S18 - Live HarMoCAP to Harmonic Shaper integration
+
+The live integration path was exercised from a V4L2 camera through HarMoCAP OSC, harmonic-weaver, and the audible JACK/R24 Shaper. The promoted ft2 engine and fallback checkpoint were not present locally, so the launcher now accepts an explicit `--harmocap-checkpoint` for a single run without changing `configs/model.yaml`. The validated live run used the locally available `yolo26m-pose.pt`; it is integration evidence only, not a replacement evaluation for ft2.
+
+Evidence before the runtime stopped: 827 recorded HarMoCAP frames, 2,923 instrument-route records, active Shaper partials at exact `f1*n`, and direct user confirmation that movement produced a musical audible response. The scripted hardware-free rehearsal also passed completely (`t45-20260719T092417Z`), including focused-subject partials `1..5`, panic release/rearm, and finite non-silent audio evidence.
+
+The live camera process later stopped on `RuntimeError: CUDA error: an illegal memory access was encountered` in Ultralytics BoT-SORT ReID. This is an open stability failure in the CUDA/ReID path, separate from the validated OSC-to-audio control path. No claim of sustained GPU stability is made.

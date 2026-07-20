@@ -31,3 +31,12 @@ Beacon ecosystem re-architecture: **COMPLETE** (26/26 Kanban cards done). F0-F4 
 ## Quick-start for /new
 
 Load BITACORA.md (entries S12–S14), then the rehearsal harness in harmonic-weaver/rehearsal/.
+
+§ 2026-07-18 — NVIDIA driver upgraded 550.163.01 → 610.43.02 (CUDA repo, DKMS, rebooted, verified). This targets the torch/cu124 intermittent illegal-instruction crash hypothesis. Next live/soak run doubles as the smoke test: if no crash on driver 610, close the infra issue; if it crashes, hypothesis dead, keep CPU fallback.
+
+## Live audio routing quirks (R24)
+- After an unclean boot, WirePlumber may not profile the R24 even though ALSA sees it (card exists, PCM OK, device missing from wpctl/GNOME). Fix: `systemctl --user restart wireplumber` — the R24 node appears and becomes default sink (it is the configured default).
+- pw-jack (scsynth) does NOT re-link its outputs after a wireplumber restart: manually `pw-link SuperCollider:out_1 <R24 sink>:playback_FL` and `out_2 -> playback_FR`. sounddevice (shaper) re-links itself to the default sink automatically.
+
+## Shaper silent via sounddevice — ROOT CAUSE SOLVED (2026-07-19)
+PortAudio/sounddevice through the PipeWire ALSA plugin renders SILENCE on this host (links exist, callback runs at real-time cadence, DSP verified non-silent via recorder tap rms=0.32, nothing reaches ears; aplay through the same ALSA 'default' PCM IS audible). The audible path is JACK under pw-jack — the historical working setup. Fixes: harmonic-shaper audio_engine adopts the JACK server sample rate (else PaErrorCode -9997); start-live-stack.sh launches the shaper via `pw-jack ... --device "R24 Analog Stereo"` (override: --shaper-device / SHAPER_DEVICE env). JACK server runs at 48000 Hz; R24 device substring must be unique ('R24' alone matches the 8-ch Surround node first -> invalid channels).

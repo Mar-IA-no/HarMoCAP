@@ -42,7 +42,8 @@ class HarmocapPipeline:
     def __init__(self, repo_root: str | Path, *, source: int | str = 0,
                  record_to: str | Path | None = None,
                  osc_destinations: list[tuple[str, int]] | None = None,
-                 mode: str = "group"):
+                 mode: str = "group",
+                 checkpoint: str | Path | None = None):
         self.repo = Path(repo_root)
         cfg = lambda name: yaml.safe_load((self.repo / "configs" / f"{name}.yaml").read_text())
         self.cfg_model = cfg("model")
@@ -70,6 +71,14 @@ class HarmocapPipeline:
         if "identity" in ov:
             self.cfg_reacq["enabled"] = ov["identity"].get(
                 "reacquisition_enabled", self.cfg_reacq.get("enabled", True))
+
+        if checkpoint is not None:
+            candidate = Path(checkpoint)
+            if not candidate.is_absolute():
+                candidate = self.repo / candidate
+            if not candidate.is_file():
+                raise FileNotFoundError(f"HarMoCAP checkpoint not found: {candidate}")
+            self.cfg_model["model"]["realtime_checkpoint"] = str(candidate)
 
         manifest = (self.repo / "schemas" / "osc_contract.v1.json")
         import json as _json

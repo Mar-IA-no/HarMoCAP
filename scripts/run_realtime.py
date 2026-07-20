@@ -55,6 +55,8 @@ def main() -> int:
     ap.add_argument("--mode", default="group", choices=("group", "crowd"),
                     help="group: identidad sagrada (BoT-SORT+ReID+reasoc) | "
                          "crowd: masa, recall (imgsz alto, agregados)")
+    ap.add_argument("--checkpoint", default=None,
+                    help="Explicit local pose checkpoint for this run")
     ap.add_argument("--show", action="store_true",
                     help="ventana con esqueletos + selección de foco: teclas "
                          "1-N = persona visible (izq→der), 0/a = auto, q/ESC = salir")
@@ -63,7 +65,8 @@ def main() -> int:
     source = int(args.source) if args.source.isdigit() else args.source
     dests = [(args.host, args.port)] if args.host and args.port else None
     pipe = HarmocapPipeline(REPO, source=source, record_to=args.record,
-                            osc_destinations=dests, mode=args.mode)
+                            osc_destinations=dests, mode=args.mode,
+                            checkpoint=args.checkpoint)
     pipe.camera.start()
     print(f"[run] backend: {pipe.backend.info()}")
     print(f"[run] captura: {pipe.camera.profile()}")
