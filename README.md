@@ -30,7 +30,7 @@ No es todavia un producto clinico, un sistema de interpretacion psicologica del 
 | `schemas/` | Contrato canonico: `osc_contract.v1.json` (manifiesto) + JSON Schema de grabaciones |
 | `harmocap-nico-kit/` | **Kit portable para Nico** (generado, no editar a mano): replay + receptor + spec, stdlib pura |
 | `docs/` | `MANUAL_DE_USO.md` (**qué se puede medir y cómo usarlo**), `INTERFACE_SPEC.md` (contrato explicado), `FEATURES.md` (formulas), `DATASET_ROADMAP.md` |
-| `scripts/` | **webapp** (interfaz web local), validate_workflow, export_model, run_realtime, record_session, build_nico_kit |
+| `scripts/` | **webapp** (interfaz web local), **fetch_models** (baja los modelos), validate_workflow, export_model, run_realtime, build_nico_kit |
 | `configs/` | model / smoothing / identity / features / osc (YAML) |
 | `examples/` | sesion sintetica de ejemplo + fixtures deterministas del contrato |
 | `reports/<run_id>/` | evidencia versionada por corrida (env, build del engine, metricas GO/NO-GO) |

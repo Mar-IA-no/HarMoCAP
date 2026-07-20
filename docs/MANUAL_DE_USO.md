@@ -119,17 +119,30 @@ Eso abre el navegador en una página local (nada sale del equipo). Ahí, en cuat
 
 Procesa con el hardware que tenga la máquina hasta donde alcance: en una con placa de video va rápido, en una sin placa tarda más, pero siempre corre. La página lo dice de entrada.
 
-### Correr en una máquina sin placa NVIDIA (por ejemplo, una Mac)
+### Clonar y correr en cualquier máquina (incluida una Mac)
 
-El sistema corre en cualquier máquina, pero hay que tener en cuenta que **dos archivos pesados no viajan con el repositorio** (están excluidos a propósito): el modelo entrenado y el modelo de densidad. Un clon fresco necesita:
+El proyecto es **plug-and-play**: se clona, se instalan las dependencias, y la primera vez que se lanza la interfaz web, **los modelos que faltan se descargan solos**. Los modelos entrenados no viajan dentro del repositorio (son binarios pesados que inflarían su historia), pero están publicados aparte y se bajan automáticamente.
 
-1. **El modelo entrenado** (imprescindible). En una Mac o un equipo sin placa NVIDIA, el sistema usa el modelo portable `harmocap-m-pose-ft2.pt` —la versión rápida compilada solo sirve en placas NVIDIA—. Ese archivo hay que copiarlo a la raíz del clon; sin él, no hay modelo que cargar.
+Los pasos, una sola vez:
 
-2. **El modelo de densidad** (opcional, para las señales de masa). Los archivos `outputs/density/*.onnx` habilitan `mass_present` y `mass_active` en el modo masa. Si no están, el modo masa igual funciona, solo que esas dos señales llegan en cero.
+```bash
+git clone <repo> && cd HarMoCAP
+pip install -r requirements.txt      # NO requirements.lock (fijado a la placa del servidor)
+python scripts/webapp.py             # baja los modelos si faltan y abre la interfaz
+```
 
-3. **Las dependencias**: instalar desde `requirements.txt`, **no** desde `requirements.lock` —ese está fijado a las versiones de la placa NVIDIA del servidor y no sirve en otra máquina—. En una Mac, la instalación estándar de PyTorch ya trae el soporte de Apple Silicon.
+Si preferís bajar los modelos por adelantado, sin abrir la interfaz:
 
-La cámara web sí funciona cuando el sistema corre local (no así cuando se accede a un servidor remoto, que buscaría la cámara del servidor).
+```bash
+python scripts/fetch_models.py
+```
+
+Notas para máquinas sin placa NVIDIA (una Mac, por ejemplo):
+
+- Anda igual, con el modelo portable; la versión compilada rápida es solo para placas NVIDIA y el sistema usa la portable automáticamente.
+- Va **más lento** que en una máquina con placa; la barra de progreso lo muestra.
+- La **cámara web funciona** cuando el sistema corre local (no cuando se accede a un servidor remoto, que buscaría la cámara del servidor).
+- En una Mac, la instalación estándar de PyTorch ya trae el soporte de Apple Silicon.
 
 ## 7. Cómo poner cada cosa a funcionar por línea de comandos (MVP de cada opción)
 

@@ -416,3 +416,15 @@ Implementada la interfaz web que el usuario aprobo (plan de 3 hitos aprobado com
 Verificacion: procesamiento headless en clip de 6s en ambos modos (grupo 22 fps, masa 36 fps en 3090), CSV con header y valores correctos (tempo_bpm vacio cuando invalido), figuras generadas, Blocks construido sin error, servidor HTTP 200 en localhost. Escala relativa de densidad: en clips cortos mass_present=0 (ventana de normalizacion sin llenar) — comportamiento esperado documentado.
 
 Alineacion con la filosofia del proyecto: es el mismo espiritu "enlatado" del kit, pero para el lado de captura. Un equipo clona y tiene interfaz lista; procesa con lo que tenga. Manual de uso actualizado (seccion 6 = interfaz web como via mas facil). Pendiente opcional (F3 extra): boton de "optimizar engine para esta maquina" para usuarios NVIDIA; previsualizacion lado a lado de varios overlays.
+
+## 2026-07-20 - S12 - Limpieza de git (5.2GB→2.8MB) + repos plug-and-play (modelos por release)
+
+**Limpieza de git.** El `.git` pesaba 5.2 GB: 677 objetos sueltos, 571 colgantes de hasta 214 MB cada uno — los videos de `Biblioteca/test/` que un `git add -A` alcanzó a escribir en objects antes de colgarse y ser abortado (quedaron sin referenciar). `git reflog expire --expire=now --all` + `git gc --prune=now`: **5.2 GB → 2.8 MB**, HEAD y toda la historia real intactos. No afectaba a los remotos (nunca se pushearon esos objetos).
+
+**Plug-and-play.** Los modelos entrenados estaban gitignoreados (`*.pt`, `*.onnx`, `outputs/`) — regla correcta para checkpoints de entrenamiento, pero barria tambien el entregable `harmocap-m-pose-ft2.pt`, y un clon fresco no podia correr. Solucion estandar (patron ultralytics): publicar como assets de release + descarga automatica.
+- **Release `models-v1`** creado en AMBOS repos (Mar-IA-no y AlterMundi) con `harmocap-m-pose-ft2.pt` (47 MB), `zip_qnrf_n.onnx` y `zip_nwpu_n.onnx`. El modelo es fine-tune sobre datasets publicos (CrowdPose+COCO), sin datos de personas — publicable. Las grabaciones de sesiones reales siguen afuera.
+- **`scripts/fetch_models.py`**: baja lo que falte desde el release (prueba ambos repos en orden), verifica sha256. Verificado: descarga real 10 MB, hash coincide.
+- **`scripts/webapp.py`**: llama a `ensure_models()` al arrancar — un clon fresco baja el modelo solo la primera vez y abre la interfaz. `--no-fetch` para saltarlo.
+- Manual actualizado: seccion de "clonar y correr en cualquier maquina" ahora describe el flujo plug-and-play (antes decia copiar por scp, ya obsoleto).
+
+Ahora: `git clone && pip install -r requirements.txt && python scripts/webapp.py` deja el sistema andando en cualquier maquina, bajando los modelos solo. La camara web funciona corriendo local.
