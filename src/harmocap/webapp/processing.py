@@ -28,7 +28,9 @@ from harmocap.identity import SlotManager
 from harmocap.perception import PoseBackend, resolve_device
 from harmocap.schema import CROWD_FIELDS, FEATURE_ORDER, KpState
 from harmocap.smoothing import KeypointSmoother
-from harmocap.webapp.offline_time import probe_video_timeline, select_source_indices
+from harmocap.webapp.offline_time import (
+    probe_video_timeline, select_source_indices, source_sha256,
+)
 
 REPO = Path(__file__).resolve().parent.parent.parent.parent
 
@@ -543,7 +545,8 @@ def process_video(video: str | Path, run: RunConfig, render: RenderConfig,
     dmap = None
     idx = {f: i for i, f in enumerate(FEATURE_ORDER)}
 
-    def abort_decode(reason: str, source_index: int, extra_frames: int = 0):
+    def abort_decode(reason: str, source_index: int, extra_frames: int = 0,
+                     source_changed: bool = False):
         """Deja evidencia del fallo sin presentar el JSONL parcial como sesión."""
         cap.release()
         if vw is not None:
@@ -566,8 +569,10 @@ def process_video(video: str | Path, run: RunConfig, render: RenderConfig,
                                  "skipped_frame_stride": n_eligible - to_do,
                                  "selected": to_do, "processed": frames,
                                  "decoded_before_failure": source_index,
-                                 "decode_failures": int(not extra_frames),
+                                 "decode_failures": int(not extra_frames and
+                                                        not source_changed),
                                  "extra_decoded_frames": extra_frames,
+                                 "source_changed": source_changed,
                                  "duplicate_pts": 0},
         }, indent=2, ensure_ascii=False), encoding="utf-8")
         raise ValueError(reason)
@@ -621,7 +626,10 @@ def process_video(video: str | Path, run: RunConfig, render: RenderConfig,
 
         for cname in CROWD_FIELDS:
             crowd_series[cname].append((t_s, crowd_out[cname]))
+        processed_elapsed_us = round((time.monotonic() - t0) * 1_000_000)
         fj.write(json.dumps({"t_s": t_s, "t_us": t_us, "frame": frames,
+                             "processed_elapsed_us": processed_elapsed_us,
+                             "processing_clock_domain": "monotonic_run_elapsed",
                              "source_frame_index": src_i,
                              "source_pts_ticks": timeline.ticks[src_i],
                              "source_pts_origin_ticks": timeline.ticks[0],
@@ -648,6 +656,9 @@ def process_video(video: str | Path, run: RunConfig, render: RenderConfig,
     if extra:
         abort_decode("OpenCV decodificó más cuadros que los informados por "
                      "ffprobe", total_src, extra_frames=1)
+    if source_sha256(video) != timeline.source_sha256:
+        abort_decode("el archivo de video cambió durante el procesamiento",
+                     total_src, source_changed=True)
 
     cap.release()
     if vw is not None:
@@ -670,9 +681,11 @@ def process_video(video: str | Path, run: RunConfig, render: RenderConfig,
                              "eligible_pts_crop": n_eligible,
                              "skipped_frame_stride": n_eligible - len(selected),
                              "selected": len(selected), "processed": frames,
-                             "decode_failures": 0, "duplicate_pts": 0},
+                             "decode_failures": 0, "source_changed": False,
+                             "duplicate_pts": 0},
         "render_timing": "constant_fps_preview" if render.write_video else None,
         "frames_processed": frames, "fps_proc": round(frames / dt, 1),
+        "processing_clock_domain": "monotonic_run_elapsed",
         "video_codec": fourcc}, indent=2, ensure_ascii=False), encoding="utf-8")
 
     return ProcessResult(

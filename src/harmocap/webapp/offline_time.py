@@ -60,6 +60,7 @@ def validate_timeline(data: dict, source_sha256: str) -> VideoTimeline:
 def probe_video_timeline(video: str | Path) -> VideoTimeline:
     """Lee PTS en orden de presentación y vincula el resultado al archivo."""
     video = Path(video)
+    before = source_sha256(video)
     command = ["ffprobe", "-v", "error", "-select_streams", "v:0",
                "-show_streams", "-show_frames", "-show_entries",
                "stream=time_base:frame=pts", "-of", "json",
@@ -70,11 +71,19 @@ def probe_video_timeline(video: str | Path) -> VideoTimeline:
         raise RuntimeError("ffprobe es necesario para analizar video offline") from exc
     except subprocess.CalledProcessError as exc:
         raise ValueError(f"ffprobe no pudo leer el video: {exc.stderr.strip()}") from exc
+    after = source_sha256(video)
+    if before != after:
+        raise ValueError("el archivo de video cambió durante la inspección PTS")
+    return validate_timeline(json.loads(result.stdout), before)
+
+
+def source_sha256(video: str | Path) -> str:
+    """Hash en streaming del medio original; no almacena sus cuadros."""
     digest = hashlib.sha256()
-    with video.open("rb") as source:
+    with Path(video).open("rb") as source:
         for block in iter(lambda: source.read(1024 * 1024), b""):
             digest.update(block)
-    return validate_timeline(json.loads(result.stdout), digest.hexdigest())
+    return digest.hexdigest()
 
 
 def select_source_indices(timeline: VideoTimeline, t_start: float, t_end: float,

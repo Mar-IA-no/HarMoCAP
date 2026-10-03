@@ -97,17 +97,21 @@ def test_pipeline_csv_y_derivados_reciben_delta_pts_real(clip, tmp_path, monkeyp
     assert [(row["source_pts_ticks"] - row["source_pts_origin_ticks"]) / 1000
             for row in rows] == pytest.approx([t - seconds[0] for t in expected])
     assert [row["frame"] for row in rows] == list(range(1, len(expected) + 1))
+    assert all(row["processing_clock_domain"] == "monotonic_run_elapsed" for row in rows)
+    assert [row["processed_elapsed_us"] for row in rows] == sorted(
+        row["processed_elapsed_us"] for row in rows)
     assert rows[0]["source_video_sha256"] == rows[-1]["source_video_sha256"]
     assert [row["persons"][0]["features"][0] for row in rows] == expected
     assert [p[0] for p in result.feature_series[FEATURE_ORDER[0]]] == expected
     manifest = json.loads(result.config_path.read_text())
     assert manifest["video"]["pts_origin_ticks"] == 2000
     assert manifest["video"]["time_origin"] == "first_decoded_pts"
+    assert manifest["processing_clock_domain"] == "monotonic_run_elapsed"
     assert manifest["frame_accounting"] == {
         "source_frames": 4, "outside_pts_crop": 4 - len(expected),
         "eligible_pts_crop": len(expected), "skipped_frame_stride": 0,
         "selected": len(expected), "processed": len(expected),
-        "decode_failures": 0, "duplicate_pts": 0}
+        "decode_failures": 0, "source_changed": False, "duplicate_pts": 0}
     assert manifest["render_timing"] is None
     persons_csv, crowd_csv = export_csv(result.jsonl_path, tmp_path)
     for file in (persons_csv, crowd_csv):
@@ -164,3 +168,33 @@ def test_decodificacion_incompleta_deja_estado_explicito(clip, tmp_path, monkeyp
     assert manifest["frame_accounting"]["processed"] == 2
     assert not (tmp_path / f"{stem}.jsonl").exists()
     assert (tmp_path / f"{stem}.partial.jsonl").exists()
+
+
+def test_medio_modificado_no_produce_sesion_completa(clip, tmp_path, monkeypatch):
+    path, _ = clip
+    real_probe = processing.probe_video_timeline
+
+    def mutate_after_probe(filename):
+        timeline = real_probe(filename)
+        with path.open("ab") as handle:
+            handle.write(b"changed-after-inventory")
+        return timeline
+
+    class FakeState:
+        def __init__(self, _run):
+            self.backend = SimpleNamespace(track_frame=lambda _f: ([], [], None, None),
+                                           info=lambda: {})
+            self.slots = SimpleNamespace(update=lambda *_a, **_kw: [],
+                                         focused_slot=0)
+            self.density = self.crowd = None
+            self.device = "fake"
+
+    monkeypatch.setattr(processing, "probe_video_timeline", mutate_after_probe)
+    monkeypatch.setattr(processing, "_PipelineState", FakeState)
+    with pytest.raises(ValueError, match="cambió durante el procesamiento"):
+        processing.process_video(path, processing.RunConfig(),
+                                 processing.RenderConfig(write_video=False), tmp_path)
+    manifest = json.loads((tmp_path / f"{path.stem}__grupo__run_config.json").read_text())
+    assert manifest["status"] == "failed"
+    assert manifest["frame_accounting"]["source_changed"] is True
+    assert manifest["frame_accounting"]["decode_failures"] == 0

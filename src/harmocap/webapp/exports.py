@@ -18,7 +18,8 @@ def export_csv(jsonl_path: str | Path, out_dir: str | Path,
     stem = jsonl_path.stem
     persons_csv = out_dir / f"{stem}__personas.csv"
     crowd_csv = out_dir / f"{stem}__multitud.csv"
-    provenance = ["t_us", "source_frame_index", "source_pts_ticks",
+    provenance = ["t_us", "processed_elapsed_us", "processing_clock_domain",
+                  "source_frame_index", "source_pts_ticks",
                   "source_pts_origin_ticks",
                   "source_time_base", "source_video_sha256", "timestamp_state"]
 
