@@ -12,6 +12,10 @@ una medición. Conserva el SHA-256 del archivo, índice fuente (base cero), PTS
 en ticks, base de tiempo y segundos derivados del PTS. La selección
 `t_start <= PTS < t_end` usa segundos absolutos del medio; `t_end=0` deja el
 extremo abierto. `frame_stride` cuenta sólo cuadros elegibles por PTS.
+Se registra también el PTS del **primer cuadro decodificado del medio completo**,
+incluso si el recorte comienza después. Un consumidor puede calcular
+`tiempo_relativo = (PTS_cuadro - PTS_origen) × base_de_tiempo` sin elegir
+accidentalmente el primer cuadro del recorte como nuevo origen.
 
 La decodificación OpenCV recorre el archivo secuencialmente desde el principio,
 para que el cuadro decodificado de índice `i` corresponda al PTS de índice `i`

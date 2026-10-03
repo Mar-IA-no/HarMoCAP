@@ -93,11 +93,16 @@ def test_pipeline_csv_y_derivados_reciben_delta_pts_real(clip, tmp_path, monkeyp
     rows = [json.loads(line) for line in result.jsonl_path.read_text().splitlines()]
     assert [row["t_s"] for row in rows] == expected
     assert [row["source_frame_index"] for row in rows] == [seconds.index(t) for t in expected]
+    assert [row["source_pts_origin_ticks"] for row in rows] == [2000] * len(expected)
+    assert [(row["source_pts_ticks"] - row["source_pts_origin_ticks"]) / 1000
+            for row in rows] == pytest.approx([t - seconds[0] for t in expected])
     assert [row["frame"] for row in rows] == list(range(1, len(expected) + 1))
     assert rows[0]["source_video_sha256"] == rows[-1]["source_video_sha256"]
     assert [row["persons"][0]["features"][0] for row in rows] == expected
     assert [p[0] for p in result.feature_series[FEATURE_ORDER[0]]] == expected
     manifest = json.loads(result.config_path.read_text())
+    assert manifest["video"]["pts_origin_ticks"] == 2000
+    assert manifest["video"]["time_origin"] == "first_decoded_pts"
     assert manifest["frame_accounting"] == {
         "source_frames": 4, "outside_pts_crop": 4 - len(expected),
         "eligible_pts_crop": len(expected), "skipped_frame_stride": 0,
@@ -111,6 +116,7 @@ def test_pipeline_csv_y_derivados_reciben_delta_pts_real(clip, tmp_path, monkeyp
         assert [int(row["source_frame_index"]) for row in exported] == [
             seconds.index(t) for t in expected]
         assert [float(row["t_s"]) for row in exported] == expected
+        assert [int(row["source_pts_origin_ticks"]) for row in exported] == [2000] * len(expected)
         assert all(row["source_video_sha256"] == rows[0]["source_video_sha256"]
                    for row in exported)
 
