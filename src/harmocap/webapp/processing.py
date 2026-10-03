@@ -28,6 +28,9 @@ from harmocap.identity import SlotManager
 from harmocap.perception import PoseBackend, resolve_device
 from harmocap.schema import CROWD_FIELDS, FEATURE_ORDER, KpState
 from harmocap.smoothing import KeypointSmoother
+from harmocap.webapp.offline_time import (
+    probe_video_timeline, select_source_indices, source_sha256,
+)
 
 REPO = Path(__file__).resolve().parent.parent.parent.parent
 
@@ -505,49 +508,85 @@ def benchmark(video: str | Path, run: RunConfig, n_frames: int = 12) -> dict:
 
 def process_video(video: str | Path, run: RunConfig, render: RenderConfig,
                   out_dir: str | Path, progress=None) -> ProcessResult:
-    """Procesa el video en una pasada. `progress`: callable(frac, texto) o None."""
+    """Analiza un archivo con sus PTS originales. `progress`: callable o None."""
     video = Path(video)
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+    timeline = probe_video_timeline(video)
+    selected, n_eligible, n_outside = select_source_indices(
+        timeline, run.t_start, run.t_end, run.frame_stride)
+    if not selected:
+        raise ValueError("el recorte temporal no contiene cuadros para procesar")
+    selected_set = set(selected)
 
     st = _PipelineState(run)
     renderer = Renderer(render)
 
     cap = cv2.VideoCapture(str(video))
+    if not cap.isOpened():
+        raise ValueError("OpenCV no pudo abrir el video")
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
     w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    total_src = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) or 1
-    f_start = int(max(run.t_start, 0) * fps)
-    f_end = int(run.t_end * fps) if run.t_end > 0 else total_src
-    f_end = min(f_end, total_src)
-    if f_start:
-        cap.set(cv2.CAP_PROP_POS_FRAMES, f_start)
-    to_do = max((f_end - f_start) // max(1, run.frame_stride), 1)
+    total_src = len(timeline.ticks)
+    to_do = len(selected)
 
     stem = f"{video.stem}__{run.preset}"
     out_video = out_dir / f"{stem}.mp4"
     vw = fourcc = None
     jsonl = out_dir / f"{stem}.jsonl"
+    cfg_path = out_dir / f"{stem}__run_config.json"
     fj = jsonl.open("w", encoding="utf-8")
 
     feat_series = {f: [] for f in FEATURE_ORDER}
     crowd_series = {c: [] for c in CROWD_FIELDS}
-    t0, frames, src_i = time.time(), 0, f_start
+    t0, frames, last_t_us = time.monotonic(), 0, None
     density_i, last_mass = 0, {"mass_present": 0.0, "mass_active": 0.0}
     dmap = None
     idx = {f: i for i, f in enumerate(FEATURE_ORDER)}
 
-    while src_i < f_end:
+    def abort_decode(reason: str, source_index: int, extra_frames: int = 0,
+                     source_changed: bool = False):
+        """Deja evidencia del fallo sin presentar el JSONL parcial como sesión."""
+        cap.release()
+        if vw is not None:
+            vw.release()
+        fj.close()
+        jsonl.replace(jsonl.with_suffix(".partial.jsonl"))
+        if out_video.exists():
+            out_video.replace(out_video.with_suffix(".partial.mp4"))
+        cfg_path.write_text(json.dumps({
+            "status": "failed", "reason": reason,
+            "source_frame_index": source_index,
+            "video": {"name": video.name, "sha256": timeline.source_sha256,
+                      "time_base": timeline.time_base_text,
+                      "pts_origin_ticks": timeline.ticks[0],
+                      "time_origin": "first_decoded_pts",
+                      "timestamp_state": "observed_ffprobe_pts"},
+            "frame_accounting": {"source_frames": total_src,
+                                 "outside_pts_crop": n_outside,
+                                 "eligible_pts_crop": n_eligible,
+                                 "skipped_frame_stride": n_eligible - to_do,
+                                 "selected": to_do, "processed": frames,
+                                 "decoded_before_failure": source_index,
+                                 "decode_failures": int(not extra_frames and
+                                                        not source_changed),
+                                 "extra_decoded_frames": extra_frames,
+                                 "source_changed": source_changed,
+                                 "duplicate_pts": 0},
+        }, indent=2, ensure_ascii=False), encoding="utf-8")
+        raise ValueError(reason)
+
+    for src_i in range(total_src):
         ok, frame = cap.read()
         if not ok:
-            break
-        src_i += 1
-        if (src_i - 1 - f_start) % max(1, run.frame_stride):
+            abort_decode(f"fallo de decodificación en cuadro fuente {src_i}; "
+                         f"se habían procesado {frames}/{to_do}", src_i)
+        if src_i not in selected_set:
             continue
         frames += 1
-        t_us = int((src_i - 1) * 1e6 / fps)
-        t_s = t_us / 1e6
+        t_us = timeline.microseconds(src_i)
+        t_s = timeline.seconds(src_i)
         dets, raw, _sp, _wh = st.backend.track_frame(frame)
         canvas = renderer.background(frame)
 
@@ -583,15 +622,25 @@ def process_video(video: str | Path, run: RunConfig, render: RenderConfig,
             for fname in FEATURE_ORDER:
                 fi = idx[fname]
                 if states[fi] != int(KpState.INVALID):
-                    feat_series[fname].append((round(t_s, 3), sid, vals[fi]))
+                    feat_series[fname].append((t_s, sid, vals[fi]))
 
         for cname in CROWD_FIELDS:
-            crowd_series[cname].append((round(t_s, 3), crowd_out[cname]))
-        fj.write(json.dumps({"t_s": round(t_s, 3), "frame": frames,
+            crowd_series[cname].append((t_s, crowd_out[cname]))
+        processed_elapsed_us = round((time.monotonic() - t0) * 1_000_000)
+        fj.write(json.dumps({"t_s": t_s, "t_us": t_us, "frame": frames,
+                             "processed_elapsed_us": processed_elapsed_us,
+                             "processing_clock_domain": "monotonic_run_elapsed",
+                             "source_frame_index": src_i,
+                             "source_pts_ticks": timeline.ticks[src_i],
+                             "source_pts_origin_ticks": timeline.ticks[0],
+                             "source_time_base": timeline.time_base_text,
+                             "source_video_sha256": timeline.source_sha256,
+                             "timestamp_state": "observed_ffprobe_pts",
                              "persons": frame_persons, "crowd": crowd_out}) + "\n")
 
         if render.write_video:
-            canvas = renderer.compose_trail(canvas, layer, run.frame_stride / fps)
+            dt_s = (t_us - last_t_us) / 1e6 if last_t_us is not None else 0.0
+            canvas = renderer.compose_trail(canvas, layer, dt_s)
             canvas = renderer.draw_hud(canvas, [
                 f"t={t_s:6.2f}s  ·  {run.preset}  ·  personas: {len(frame_persons)}"])
             canvas = renderer.rescale(canvas)
@@ -601,20 +650,42 @@ def process_video(video: str | Path, run: RunConfig, render: RenderConfig,
             vw.write(canvas)
         if progress and frames % 10 == 0:
             progress(frames / to_do, f"Procesando… {frames}/{to_do} cuadros")
+        last_t_us = t_us
+
+    extra, _ = cap.read()
+    if extra:
+        abort_decode("OpenCV decodificó más cuadros que los informados por "
+                     "ffprobe", total_src, extra_frames=1)
+    if source_sha256(video) != timeline.source_sha256:
+        abort_decode("el archivo de video cambió durante el procesamiento",
+                     total_src, source_changed=True)
 
     cap.release()
     if vw is not None:
         vw.release()
     fj.close()
-    dt = max(time.time() - t0, 1e-6)
+    dt = max(time.monotonic() - t0, 1e-6)
 
-    cfg_path = out_dir / f"{stem}__run_config.json"
     cfg_path.write_text(json.dumps({
+        "status": "complete",
         "run": asdict(run), "render": asdict(render),
         "backend": st.backend.info(), "device": st.device,
-        "video": {"name": video.name, "fps": fps, "w": w, "h": h,
-                  "frames_src": total_src},
+        "video": {"name": video.name, "sha256": timeline.source_sha256,
+                  "fps_nominal": fps, "w": w, "h": h,
+                  "frames_src": total_src, "time_base": timeline.time_base_text,
+                  "pts_origin_ticks": timeline.ticks[0],
+                  "time_origin": "first_decoded_pts",
+                  "timestamp_state": "observed_ffprobe_pts"},
+        "frame_accounting": {"source_frames": total_src,
+                             "outside_pts_crop": n_outside,
+                             "eligible_pts_crop": n_eligible,
+                             "skipped_frame_stride": n_eligible - len(selected),
+                             "selected": len(selected), "processed": frames,
+                             "decode_failures": 0, "source_changed": False,
+                             "duplicate_pts": 0},
+        "render_timing": "constant_fps_preview" if render.write_video else None,
         "frames_processed": frames, "fps_proc": round(frames / dt, 1),
+        "processing_clock_domain": "monotonic_run_elapsed",
         "video_codec": fourcc}, indent=2, ensure_ascii=False), encoding="utf-8")
 
     return ProcessResult(

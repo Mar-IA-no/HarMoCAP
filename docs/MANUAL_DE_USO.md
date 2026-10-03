@@ -124,6 +124,8 @@ Eso abre el navegador en una página local (nada sale del equipo), con dos pesta
 
 **Procesar un video** — **cargás** un video —o grabás con la webcam— y, si querés, indicás desde y hasta qué segundo procesar; **elegís** el preset y, si hace falta, abrís los parámetros; **elegís** qué dibujar y qué exportar; le das **procesar**; y **ves** el video con el render, los gráficos de cada variable en el tiempo, y los botones para **descargar** la sesión, los CSV y la configuración exacta de la corrida.
 
+Para analizar un **archivo original** necesitás `ffprobe` (paquete FFmpeg) en el `PATH`. El recorte usa los segundos PTS del medio, incluso si el primer cuadro no empieza en cero o hay huecos. JSONL y CSV conservan PTS, base de tiempo, índice fuente y SHA-256. Si falta el PTS o la decodificación no coincide con el inventario, la corrida falla explícitamente; el manifiesto identifica una decodificación incompleta y el JSONL parcial se rotula `.partial.jsonl`. El MP4 dibujado tiene FPS constante: es una vista previa, no una fuente para medir fase. Ver [tiempo y procedencia offline](VIDEO_OFFLINE_TIME.md).
+
 **En vivo (webcam)** — procesa la cámara **en tiempo real** y va mostrando el render y las variables mientras la persona se mueve. La cámara es la del navegador (la de tu máquina), aunque el procesamiento corra en otra máquina por la red. Los mismos controles de preset, parámetros y render están disponibles y se aplican al instante: cambiar el render es inmediato; cambiar un parámetro de procesamiento recarga el modelo y tarda unos segundos.
 
 ### Las perillas: cuánto cuesta y qué se ve
@@ -203,6 +205,7 @@ python scripts/run_realtime.py --source ruta/al/video.mp4 --mode crowd
 ```
 
 Sirve para probar contra material grabado sin depender de una cámara en vivo.
+Esta ruta ritma el archivo como **cámara simulada** y usa reloj monotónico de llegada. Para estudiar fase o intervalos originales del video, usá **Procesar un video** en la webapp y sus datos JSONL/CSV.
 
 ### Recibir las señales del otro lado
 
