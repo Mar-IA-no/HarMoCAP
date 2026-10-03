@@ -44,6 +44,8 @@ pip install -r requirements.txt      # NO requirements.lock (fijado a la placa d
 python scripts/webapp.py             # baja los modelos si faltan y abre la interfaz local
 ```
 Ver `docs/MANUAL_DE_USO.md` para qué se puede medir y cómo usarlo.
+El análisis offline de archivos requiere `ffprobe` (FFmpeg) para conservar los
+PTS originales; ver `docs/VIDEO_OFFLINE_TIME.md`.
 
 **Desarrollo / línea de comandos:**
 ```bash

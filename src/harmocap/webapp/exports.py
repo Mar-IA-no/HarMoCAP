@@ -18,19 +18,22 @@ def export_csv(jsonl_path: str | Path, out_dir: str | Path,
     stem = jsonl_path.stem
     persons_csv = out_dir / f"{stem}__personas.csv"
     crowd_csv = out_dir / f"{stem}__multitud.csv"
+    provenance = ["t_us", "source_frame_index", "source_pts_ticks",
+                  "source_time_base", "source_video_sha256", "timestamp_state"]
 
     with jsonl_path.open(encoding="utf-8") as fj, \
             persons_csv.open("w", newline="", encoding="utf-8") as fp, \
             crowd_csv.open("w", newline="", encoding="utf-8") as fc:
         wp = csv.writer(fp)
         wc = csv.writer(fc)
-        wp.writerow(["t_s", "frame", "slot", "focused"] + feats)
-        wc.writerow(["t_s", "frame"] + list(CROWD_FIELDS))
+        wp.writerow(["t_s", "frame"] + provenance + ["slot", "focused"] + feats)
+        wc.writerow(["t_s", "frame"] + provenance + list(CROWD_FIELDS))
         for line in fj:
             d = json.loads(line)
+            source = [d.get(key, "") for key in provenance]
             for p in d.get("persons", []):
                 idx = {f: i for i, f in enumerate(FEATURE_ORDER)}
-                row = [d["t_s"], d["frame"], p["slot"], int(p["focused"])]
+                row = [d["t_s"], d["frame"]] + source + [p["slot"], int(p["focused"])]
                 for f in feats:
                     i = idx[f]
                     # feature inválida → celda vacía (el estado 2 no se exporta)
@@ -39,7 +42,8 @@ def export_csv(jsonl_path: str | Path, out_dir: str | Path,
                     row.append("" if st == 2 else v)
                 wp.writerow(row)
             c = d.get("crowd", {})
-            wc.writerow([d["t_s"], d["frame"]] + [c.get(k, "") for k in CROWD_FIELDS])
+            wc.writerow([d["t_s"], d["frame"]] + source +
+                        [c.get(k, "") for k in CROWD_FIELDS])
     return persons_csv, crowd_csv
 
 
